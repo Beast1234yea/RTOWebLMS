@@ -1,0 +1,385 @@
+@page "/dashboard"
+@using Microsoft.EntityFrameworkCore
+@using RTOWebLMS.Data
+@using RTOWebLMS.Models
+@using RTOWebLMS.Enums
+@inject LmsDbContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Dashboard - RTO LMS</PageTitle>
+
+<div class="container my-4">
+    <div class="header-card mb-4">
+        <h1 class="display-4 fw-bold text-white">Student Dashboard</h1>
+        <p class="lead text-white-50">Track your learning progress and achievements</p>
+    </div>
+
+    @if (currentUser == null)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Statistics Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card stat-card-blue">
+                    <div class="stat-icon">📚</div>
+                    <div class="stat-value">@enrollments.Count</div>
+                    <div class="stat-label">Active Courses</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card-green">
+                    <div class="stat-icon">✓</div>
+                    <div class="stat-value">@completedLessons</div>
+                    <div class="stat-label">Completed Lessons</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card-orange">
+                    <div class="stat-icon">⏱</div>
+                    <div class="stat-value">@totalHoursStudied</div>
+                    <div class="stat-label">Hours Studied</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card stat-card-purple">
+                    <div class="stat-icon">🎓</div>
+                    <div class="stat-value">@certificates.Count</div>
+                    <div class="stat-label">Certificates</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Overview -->
+        <div class="content-card mb-4">
+            <h3 class="section-title">Course Progress</h3>
+
+            @if (!enrollments.Any())
+            {
+                <div class="alert alert-info">
+                    <p class="mb-0">You haven't enrolled in any courses yet. Visit the <a href="/courses">course catalog</a> to get started!</p>
+                </div>
+            }
+            else
+            {
+                <div class="progress-list">
+                    @foreach (var enrollment in enrollments)
+                    {
+                        var progress = CalculateProgress(enrollment);
+                        var progressClass = progress >= 75 ? "bg-success" : progress >= 50 ? "bg-info" : progress >= 25 ? "bg-warning" : "bg-danger";
+
+                        <div class="progress-item">
+                            <div class="progress-header">
+                                <div>
+                                    <h5 class="mb-1">@enrollment.Course.Title</h5>
+                                    <small class="text-muted">@enrollment.Course.UnitCode</small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="progress-percentage">@progress%</div>
+                                    <small class="text-muted">Complete</small>
+                                </div>
+                            </div>
+                            <div class="progress" style="height: 12px;">
+                                <div class="progress-bar @progressClass"
+                                     role="progressbar"
+                                     style="width: @progress%">
+                                </div>
+                            </div>
+                            <div class="progress-footer">
+                                <small class="text-muted">
+                                    @GetCompletedLessons(enrollment) of @GetTotalLessons(enrollment) lessons completed
+                                </small>
+                                <button class="btn btn-sm btn-primary" @onclick="() => ContinueCourse(enrollment.CourseId)">
+                                    Continue Learning →
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="content-card">
+                    <h3 class="section-title">Recent Activity</h3>
+                    @if (!recentProgress.Any())
+                    {
+                        <p class="text-muted">No recent activity.</p>
+                    }
+                    else
+                    {
+                        <div class="activity-list">
+                            @foreach (var progress in recentProgress.Take(5))
+                            {
+                                <div class="activity-item">
+                                    <div class="activity-icon">✓</div>
+                                    <div class="activity-content">
+                                        <div class="activity-title">Completed: @progress.Lesson.Title</div>
+                                        <small class="text-muted">@progress.CompletedAt?.ToString("MMM dd, yyyy")</small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="content-card">
+                    <h3 class="section-title">Certificates</h3>
+                    @if (!certificates.Any())
+                    {
+                        <p class="text-muted">No certificates earned yet.</p>
+                    }
+                    else
+                    {
+                        <div class="certificates-list">
+                            @foreach (var cert in certificates)
+                            {
+                                <div class="certificate-item">
+                                    <div class="certificate-icon">🎓</div>
+                                    <div class="certificate-content">
+                                        <div class="certificate-title">@cert.Course.Title</div>
+                                        <small class="text-muted">Certificate #@cert.CertificateNumber</small>
+                                        <br />
+                                        <small class="text-muted">Issued: @cert.IssuedAt.ToString("MMM dd, yyyy")</small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .header-card {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-card-blue { border-top: 4px solid #2196F3; }
+    .stat-card-green { border-top: 4px solid #4CAF50; }
+    .stat-card-orange { border-top: 4px solid #FF9800; }
+    .stat-card-purple { border-top: 4px solid #9C27B0; }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .content-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .section-title {
+        color: #1976D2;
+        font-weight: bold;
+        margin-bottom: 1.5rem;
+    }
+
+    .progress-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .progress-item {
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+
+    .progress-percentage {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #1976D2;
+    }
+
+    .progress-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.75rem;
+    }
+
+    .activity-list, .certificates-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .activity-item, .certificate-item {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .activity-icon, .certificate-icon {
+        font-size: 1.5rem;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .activity-content, .certificate-content {
+        flex: 1;
+    }
+
+    .activity-title, .certificate-title {
+        font-weight: 600;
+        color: #333;
+    }
+</style>
+
+@code {
+    private User? currentUser;
+    private List<Enrollment> enrollments = new();
+    private List<LessonProgress> recentProgress = new();
+    private List<Certificate> certificates = new();
+    private int completedLessons = 0;
+    private int totalHoursStudied = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // For demo, get the first user
+        // In production, this would use authentication
+        currentUser = await DbContext.Users.FirstOrDefaultAsync();
+
+        if (currentUser != null)
+        {
+            // Load enrollments with related data
+            enrollments = await DbContext.Enrollments
+                .Include(e => e.Course)
+                    .ThenInclude(c => c.Modules)
+                        .ThenInclude(m => m.Lessons)
+                .Include(e => e.LessonProgress)
+                .Where(e => e.UserId == currentUser.Id)
+                .ToListAsync();
+
+            // Load recent progress
+            recentProgress = await DbContext.LessonProgress
+                .Include(lp => lp.Lesson)
+                .Include(lp => lp.Enrollment)
+                .Where(lp => lp.Enrollment.UserId == currentUser.Id && lp.Completed)
+                .OrderByDescending(lp => lp.CompletedAt)
+                .ToListAsync();
+
+            // Load certificates
+            certificates = await DbContext.Certificates
+                .Include(c => c.Course)
+                .Where(c => c.UserId == currentUser.Id)
+                .OrderByDescending(c => c.IssuedAt)
+                .ToListAsync();
+
+            // Calculate statistics
+            completedLessons = recentProgress.Count;
+            totalHoursStudied = CalculateTotalHours();
+        }
+    }
+
+    private int CalculateProgress(Enrollment enrollment)
+    {
+        var totalLessons = enrollment.Course.Modules
+            .SelectMany(m => m.Lessons)
+            .Count();
+
+        if (totalLessons == 0) return 0;
+
+        var completedLessons = enrollment.LessonProgress
+            .Count(lp => lp.Completed);
+
+        return (int)((completedLessons / (double)totalLessons) * 100);
+    }
+
+    private int GetTotalLessons(Enrollment enrollment)
+    {
+        return enrollment.Course.Modules
+            .SelectMany(m => m.Lessons)
+            .Count();
+    }
+
+    private int GetCompletedLessons(Enrollment enrollment)
+    {
+        return enrollment.LessonProgress
+            .Count(lp => lp.Completed);
+    }
+
+    private int CalculateTotalHours()
+    {
+        // Calculate based on completed lessons duration
+        var hours = 0;
+        foreach (var enrollment in enrollments)
+        {
+            var completedLessonIds = enrollment.LessonProgress
+                .Where(lp => lp.Completed)
+                .Select(lp => lp.LessonId)
+                .ToHashSet();
+
+            hours += enrollment.Course.Modules
+                .SelectMany(m => m.Lessons)
+                .Where(l => completedLessonIds.Contains(l.Id))
+                .Sum(l => l.Duration ?? 0);
+        }
+        return (int)Math.Ceiling(hours / 60.0); // Convert minutes to hours
+    }
+
+    private void ContinueCourse(string courseId)
+    {
+        Navigation.NavigateTo($"/course/{courseId}");
+    }
+}

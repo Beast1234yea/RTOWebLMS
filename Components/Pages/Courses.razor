@@ -1,0 +1,265 @@
+@page "/courses"
+@using Microsoft.EntityFrameworkCore
+@using RTOWebLMS.Data
+@using RTOWebLMS.Models
+@using RTOWebLMS.Enums
+@inject LmsDbContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Courses - RTO LMS</PageTitle>
+
+<div class="container my-4">
+    <div class="header-card mb-4">
+        <h1 class="display-4 fw-bold text-white">Course Catalog</h1>
+        <p class="lead text-white-50">Browse and enroll in available courses</p>
+    </div>
+
+    @if (courses == null)
+    {
+        <div class="text-center p-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!courses.Any())
+    {
+        <div class="alert alert-info">
+            <h4>No Courses Available</h4>
+            <p>There are currently no courses available. Please check back later.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var course in courses)
+            {
+                var isEnrolled = userEnrollments.Any(e => e.CourseId == course.Id);
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="course-card">
+                        <div class="course-card-header">
+                            <h5 class="course-title">@course.Title</h5>
+                            <span class="badge bg-primary">@course.UnitCode</span>
+                        </div>
+                        <div class="course-card-body">
+                            <p class="text-muted mb-3">
+                                @(course.Description?.Length > 150
+                                    ? course.Description.Substring(0, 150) + "..."
+                                    : course.Description)
+                            </p>
+
+                            <div class="course-info mb-3">
+                                @if (course.NominalHours > 0)
+                                {
+                                    <div class="info-item">
+                                        <span class="info-icon">⏱</span>
+                                        <span>@course.NominalHours hours</span>
+                                    </div>
+                                }
+                                @if (course.Modules.Any())
+                                {
+                                    <div class="info-item">
+                                        <span class="info-icon">📚</span>
+                                        <span>@course.Modules.Count modules</span>
+                                    </div>
+                                }
+                                @if (course.Instructor != null)
+                                {
+                                    <div class="info-item">
+                                        <span class="info-icon">👤</span>
+                                        <span>@course.Instructor.Name</span>
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-primary flex-grow-1"
+                                        @onclick="() => ViewCourse(course.Id)">
+                                    View Details
+                                </button>
+
+                                @if (isEnrolled)
+                                {
+                                    <span class="badge bg-success align-self-center px-3">Enrolled</span>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-primary"
+                                            @onclick="() => EnrollInCourse(course.Id)">
+                                        Enroll
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (showEnrollMessage)
+{
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div class="toast show" role="alert">
+            <div class="toast-header bg-success text-white">
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => showEnrollMessage = false"></button>
+            </div>
+            <div class="toast-body">
+                @enrollMessage
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .header-card {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .course-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .course-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+
+    .course-card-header {
+        background: linear-gradient(135deg, #00897B 0%, #00695C 100%);
+        padding: 1.25rem;
+        color: white;
+    }
+
+    .course-title {
+        margin: 0 0 0.5rem 0;
+        font-weight: bold;
+    }
+
+    .course-card-body {
+        padding: 1.25rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .course-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        color: #666;
+    }
+
+    .info-icon {
+        font-size: 1.1rem;
+    }
+
+    .toast-container {
+        z-index: 1050;
+    }
+</style>
+
+@code {
+    private List<Course>? courses;
+    private List<Enrollment> userEnrollments = new();
+    private string? currentUserId;
+    private bool showEnrollMessage = false;
+    private string enrollMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load all published courses
+        courses = await DbContext.Courses
+            .Include(c => c.Modules)
+            .Include(c => c.Instructor)
+            .Where(c => c.Status == CourseStatus.PUBLISHED)
+            .OrderBy(c => c.Title)
+            .ToListAsync();
+
+        // For demo, get the first user's enrollments
+        // In production, this would use authentication
+        var firstUser = await DbContext.Users.FirstOrDefaultAsync();
+        if (firstUser != null)
+        {
+            currentUserId = firstUser.Id;
+            userEnrollments = await DbContext.Enrollments
+                .Where(e => e.UserId == currentUserId)
+                .ToListAsync();
+        }
+    }
+
+    private void ViewCourse(string courseId)
+    {
+        Navigation.NavigateTo($"/course/{courseId}");
+    }
+
+    private async Task EnrollInCourse(string courseId)
+    {
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            enrollMessage = "Please log in to enroll in courses.";
+            showEnrollMessage = true;
+            return;
+        }
+
+        // Check if already enrolled
+        if (userEnrollments.Any(e => e.CourseId == courseId))
+        {
+            enrollMessage = "You are already enrolled in this course.";
+            showEnrollMessage = true;
+            return;
+        }
+
+        try
+        {
+            var enrollment = new Enrollment
+            {
+                UserId = currentUserId,
+                CourseId = courseId,
+                Status = EnrollmentStatus.ACTIVE,
+                EnrolledAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            DbContext.Enrollments.Add(enrollment);
+            await DbContext.SaveChangesAsync();
+
+            userEnrollments.Add(enrollment);
+
+            var course = courses?.FirstOrDefault(c => c.Id == courseId);
+            enrollMessage = $"Successfully enrolled in {course?.Title ?? "course"}!";
+            showEnrollMessage = true;
+
+            // Hide message after 3 seconds
+            await Task.Delay(3000);
+            showEnrollMessage = false;
+        }
+        catch (Exception ex)
+        {
+            enrollMessage = $"Error enrolling in course: {ex.Message}";
+            showEnrollMessage = true;
+        }
+    }
+}

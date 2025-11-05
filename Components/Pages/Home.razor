@@ -1,7 +1,111 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Home - RTO LMS</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="hero-section">
+    <div class="container">
+        <div class="hero-content">
+            <h1 class="hero-title">Welcome to RTO Learning Management System</h1>
+            <p class="hero-subtitle">Your journey to professional excellence starts here</p>
+            <div class="hero-actions">
+                <a href="/courses" class="btn btn-primary btn-lg">Browse Courses</a>
+                <a href="/register" class="btn btn-outline-light btn-lg">Get Started</a>
+            </div>
+        </div>
+    </div>
+</div>
 
-Welcome to your new app.
+<div class="container my-5">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon">📚</div>
+                <h3>Quality Courses</h3>
+                <p>Access industry-leading training materials and resources designed for professional development.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon">🎓</div>
+                <h3>Certifications</h3>
+                <p>Earn recognized certificates upon course completion to advance your career.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <h3>Track Progress</h3>
+                <p>Monitor your learning journey with comprehensive progress tracking and analytics.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        color: white;
+        padding: 6rem 0;
+        margin: -1rem -1rem 2rem -1rem;
+    }
+
+    .hero-content {
+        text-align: center;
+    }
+
+    .hero-title {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1.5rem;
+        margin-bottom: 2rem;
+        opacity: 0.9;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+    }
+
+    .feature-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        text-align: center;
+        transition: transform 0.2s;
+        height: 100%;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .feature-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .feature-card h3 {
+        color: #1976D2;
+        margin-bottom: 1rem;
+    }
+
+    .feature-card p {
+        color: #666;
+    }
+
+    .btn-outline-light {
+        border: 2px solid white;
+        color: white;
+    }
+
+    .btn-outline-light:hover {
+        background: white;
+        color: #2196F3;
+    }
+</style>

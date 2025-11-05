@@ -1,5 +1,6 @@
 using RTOWebLMS.Components;
 using RTOWebLMS.Data;
+using RTOWebLMS.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Register application services
+builder.Services.AddScoped<AuthenticationService>();
+builder.Services.AddScoped<AuditLogService>();
 
 // Configure database - support both SQLite (development) and PostgreSQL (production)
 var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "Sqlite";

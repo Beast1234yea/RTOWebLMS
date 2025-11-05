@@ -1,0 +1,272 @@
+@page "/register"
+@using RTOWebLMS.Services
+@using RTOWebLMS.Enums
+@inject AuthenticationService AuthService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Register - RTO LMS</PageTitle>
+
+<div class="register-container">
+    <div class="register-card">
+        <div class="register-header">
+            <h2 class="register-title">Create Account</h2>
+            <p class="register-subtitle">Join our learning platform today</p>
+        </div>
+
+        <div class="register-body">
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @errorMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success" role="alert">
+                    @successMessage
+                </div>
+            }
+
+            <form @onsubmit="HandleRegister">
+                <div class="form-group mb-3">
+                    <label for="name" class="form-label">Full Name</label>
+                    <input type="text"
+                           class="form-control"
+                           id="name"
+                           @bind="name"
+                           placeholder="Enter your full name"
+                           required />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input type="email"
+                           class="form-control"
+                           id="email"
+                           @bind="email"
+                           placeholder="Enter your email"
+                           required />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password"
+                           class="form-control"
+                           id="password"
+                           @bind="password"
+                           placeholder="Enter a password (min 6 characters)"
+                           required />
+                    <small class="form-text text-muted">Password must be at least 6 characters long.</small>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="confirmPassword" class="form-label">Confirm Password</label>
+                    <input type="password"
+                           class="form-control"
+                           id="confirmPassword"
+                           @bind="confirmPassword"
+                           placeholder="Confirm your password"
+                           required />
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="agreeTerms"
+                           @bind="agreeTerms"
+                           required>
+                    <label class="form-check-label" for="agreeTerms">
+                        I agree to the Terms of Service and Privacy Policy
+                    </label>
+                </div>
+
+                <button type="submit"
+                        class="btn btn-primary w-100 mb-3"
+                        disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Create Account
+                </button>
+            </form>
+
+            <div class="text-center">
+                <p class="mb-0">
+                    Already have an account?
+                    <a href="/login" class="text-primary fw-bold">Sign In</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-info mt-4">
+        <div class="alert alert-info">
+            <strong>Demo Mode:</strong> Registration will create a student account in the demo database.
+        </div>
+    </div>
+</div>
+
+<style>
+    .register-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .register-card {
+        width: 100%;
+        max-width: 500px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+    }
+
+    .register-header {
+        background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .register-title {
+        font-size: 1.75rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    .register-subtitle {
+        margin: 0;
+        opacity: 0.9;
+    }
+
+    .register-body {
+        padding: 2rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .form-control {
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        padding: 0.75rem;
+        transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+        border-color: #4CAF50;
+        box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+        border: none;
+        padding: 0.75rem;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: transform 0.2s;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.7;
+    }
+
+    .demo-info {
+        max-width: 500px;
+        width: 100%;
+    }
+</style>
+
+@code {
+    private string name = "";
+    private string email = "";
+    private string password = "";
+    private string confirmPassword = "";
+    private bool agreeTerms = false;
+    private bool isLoading = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private async Task HandleRegister()
+    {
+        isLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            // Validation
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                errorMessage = "Please enter your name.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                errorMessage = "Please enter your email.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                errorMessage = "Please enter a password.";
+                return;
+            }
+
+            if (password.Length < 6)
+            {
+                errorMessage = "Password must be at least 6 characters long.";
+                return;
+            }
+
+            if (password != confirmPassword)
+            {
+                errorMessage = "Passwords do not match.";
+                return;
+            }
+
+            if (!agreeTerms)
+            {
+                errorMessage = "You must agree to the Terms of Service.";
+                return;
+            }
+
+            // Register user
+            var result = await AuthService.RegisterAsync(name, email, password, UserRole.STUDENT);
+
+            if (result.IsSuccess)
+            {
+                successMessage = "Registration successful! Redirecting to login...";
+                await Task.Delay(2000);
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

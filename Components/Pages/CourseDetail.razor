@@ -1,0 +1,407 @@
+@page "/course/{courseId}"
+@using Microsoft.EntityFrameworkCore
+@using RTOWebLMS.Data
+@using RTOWebLMS.Models
+@using RTOWebLMS.Enums
+@inject LmsDbContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>@(course?.Title ?? "Course") - RTO LMS</PageTitle>
+
+@if (course == null)
+{
+    <div class="text-center p-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container my-4">
+        <!-- Course Header -->
+        <div class="course-header mb-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h1 class="course-title">@course.Title</h1>
+                    <span class="badge bg-white text-primary fs-6">@course.UnitCode</span>
+                </div>
+                @if (isEnrolled)
+                {
+                    <button class="btn btn-light btn-lg" @onclick="GoToMyLearning">
+                        Go to My Learning →
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-success btn-lg" @onclick="EnrollInCourse">
+                        Enroll Now
+                    </button>
+                }
+            </div>
+        </div>
+
+        <!-- Course Overview -->
+        <div class="content-card mb-4">
+            <h3 class="section-title">Course Overview</h3>
+            <p class="lead">@course.Description</p>
+
+            <div class="row mt-4">
+                <div class="col-md-3">
+                    <div class="stat-box">
+                        <div class="stat-icon">⏱</div>
+                        <div class="stat-value">@(course.NominalHours ?? 0) hours</div>
+                        <div class="stat-label">Duration</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-box">
+                        <div class="stat-icon">📚</div>
+                        <div class="stat-value">@course.Modules.Count</div>
+                        <div class="stat-label">Modules</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-box">
+                        <div class="stat-icon">📝</div>
+                        <div class="stat-value">@totalLessons</div>
+                        <div class="stat-label">Lessons</div>
+                    </div>
+                </div>
+                @if (course.Instructor != null)
+                {
+                    <div class="col-md-3">
+                        <div class="stat-box">
+                            <div class="stat-icon">👤</div>
+                            <div class="stat-value">@course.Instructor.Name</div>
+                            <div class="stat-label">Instructor</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Course Modules -->
+        <div class="content-card">
+            <h3 class="section-title mb-4">Course Content</h3>
+
+            @if (!course.Modules.Any())
+            {
+                <p class="text-muted">No modules available yet.</p>
+            }
+            else
+            {
+                <div class="accordion" id="modulesAccordion">
+                    @foreach (var module in course.Modules.OrderBy(m => m.OrderIndex))
+                    {
+                        var moduleId = $"module-{module.Id}";
+                        var collapseId = $"collapse-{module.Id}";
+
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="@moduleId">
+                                <button class="accordion-button @(module.OrderIndex == 0 ? "" : "collapsed")"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#@collapseId">
+                                    <div class="module-header-content">
+                                        <span class="module-number">Module @(module.OrderIndex + 1)</span>
+                                        <span class="module-title">@module.Title</span>
+                                        <span class="lesson-count">@module.Lessons.Count lessons</span>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div id="@collapseId"
+                                 class="accordion-collapse collapse @(module.OrderIndex == 0 ? "show" : "")"
+                                 data-bs-parent="#modulesAccordion">
+                                <div class="accordion-body">
+                                    @if (!string.IsNullOrEmpty(module.Description))
+                                    {
+                                        <p class="module-description">@module.Description</p>
+                                    }
+
+                                    @if (module.Lessons.Any())
+                                    {
+                                        <div class="lessons-list">
+                                            @foreach (var lesson in module.Lessons.OrderBy(l => l.OrderIndex))
+                                            {
+                                                var lessonProgress = enrollment?.LessonProgress
+                                                    .FirstOrDefault(lp => lp.LessonId == lesson.Id);
+                                                var isCompleted = lessonProgress?.Completed ?? false;
+
+                                                <div class="lesson-item">
+                                                    <div class="lesson-info">
+                                                        @if (isCompleted)
+                                                        {
+                                                            <span class="lesson-status completed">✓</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="lesson-status">○</span>
+                                                        }
+                                                        <div>
+                                                            <div class="lesson-title">@lesson.Title</div>
+                                                            @if (lesson.Duration > 0)
+                                                            {
+                                                                <small class="text-muted">@lesson.Duration min</small>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                    @if (isEnrolled)
+                                                    {
+                                                        <button class="btn btn-sm btn-primary"
+                                                                @onclick="() => ViewLesson(lesson.Id)">
+                                                            @(isCompleted ? "Review" : "Start")
+                                                        </button>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted fst-italic">No lessons in this module yet.</p>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Enroll CTA at bottom -->
+        @if (!isEnrolled)
+        {
+            <div class="enroll-cta mt-4">
+                <h4>Ready to start learning?</h4>
+                <button class="btn btn-success btn-lg" @onclick="EnrollInCourse">
+                    Enroll in this Course
+                </button>
+            </div>
+        }
+    </div>
+}
+
+<style>
+    .course-header {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        color: white;
+    }
+
+    .course-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    .content-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .section-title {
+        color: #1976D2;
+        font-weight: bold;
+        margin-bottom: 1rem;
+    }
+
+    .stat-box {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #1976D2;
+    }
+
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .module-header-content {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .module-number {
+        font-size: 0.85rem;
+        color: #1976D2;
+        font-weight: 600;
+    }
+
+    .module-title {
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin: 0.25rem 0;
+    }
+
+    .lesson-count {
+        font-size: 0.85rem;
+        color: #666;
+    }
+
+    .module-description {
+        color: #666;
+        margin-bottom: 1rem;
+    }
+
+    .lessons-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .lesson-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+
+    .lesson-item:hover {
+        background: #e9ecef;
+    }
+
+    .lesson-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .lesson-status {
+        font-size: 1.5rem;
+        color: #ccc;
+    }
+
+    .lesson-status.completed {
+        color: #4CAF50;
+    }
+
+    .lesson-title {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .enroll-cta {
+        background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .enroll-cta h4 {
+        margin-bottom: 1rem;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string CourseId { get; set; } = string.Empty;
+
+    private Course? course;
+    private Enrollment? enrollment;
+    private bool isEnrolled = false;
+    private string? currentUserId;
+    private int totalLessons = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load course with all related data
+        course = await DbContext.Courses
+            .Include(c => c.Modules)
+                .ThenInclude(m => m.Lessons)
+            .Include(c => c.Instructor)
+            .FirstOrDefaultAsync(c => c.Id == CourseId);
+
+        if (course != null)
+        {
+            totalLessons = course.Modules.SelectMany(m => m.Lessons).Count();
+        }
+
+        // For demo, get the first user
+        // In production, this would use authentication
+        var firstUser = await DbContext.Users.FirstOrDefaultAsync();
+        if (firstUser != null)
+        {
+            currentUserId = firstUser.Id;
+
+            // Check if user is enrolled
+            enrollment = await DbContext.Enrollments
+                .Include(e => e.LessonProgress)
+                .FirstOrDefaultAsync(e => e.UserId == currentUserId && e.CourseId == CourseId);
+
+            isEnrolled = enrollment != null;
+        }
+    }
+
+    private async Task EnrollInCourse()
+    {
+        if (string.IsNullOrEmpty(currentUserId))
+        {
+            // In production, redirect to login
+            return;
+        }
+
+        if (isEnrolled)
+        {
+            return;
+        }
+
+        try
+        {
+            enrollment = new Enrollment
+            {
+                UserId = currentUserId,
+                CourseId = CourseId,
+                Status = EnrollmentStatus.ACTIVE,
+                EnrolledAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            DbContext.Enrollments.Add(enrollment);
+            await DbContext.SaveChangesAsync();
+
+            isEnrolled = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error enrolling: {ex.Message}");
+        }
+    }
+
+    private void ViewLesson(string lessonId)
+    {
+        if (enrollment != null)
+        {
+            Navigation.NavigateTo($"/lesson/{lessonId}?enrollmentId={enrollment.Id}");
+        }
+    }
+
+    private void GoToMyLearning()
+    {
+        Navigation.NavigateTo("/my-learning");
+    }
+}
