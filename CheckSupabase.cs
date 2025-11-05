@@ -32,7 +32,7 @@ public static class CheckSupabase
         foreach (var course in courses)
         {
             var lessonCount = await context.Lessons
-                .Where(l => l.Module.CourseId == course.CourseId)
+                .Where(l => l.Module.CourseId == course.Id)
                 .CountAsync();
             Console.WriteLine($"  - {course.UnitCode}: {lessonCount} lessons");
         }
@@ -42,7 +42,7 @@ public static class CheckSupabase
         foreach (var course in courses)
         {
             var mediaCount = await context.LessonMedia
-                .Where(lm => lm.Lesson.Module.CourseId == course.CourseId)
+                .Where(lm => lm.Lesson.Module.CourseId == course.Id)
                 .CountAsync();
             Console.WriteLine($"  - {course.UnitCode}: {mediaCount} media files");
         }
@@ -71,7 +71,7 @@ public static class CheckSupabase
             Console.WriteLine($"  Duration: {forkliftCourse.NominalHours} hours");
 
             var modules = await context.Modules
-                .Where(m => m.CourseId == forkliftCourse.CourseId)
+                .Where(m => m.CourseId == forkliftCourse.Id)
                 .OrderBy(m => m.OrderIndex)
                 .ToListAsync();
 
