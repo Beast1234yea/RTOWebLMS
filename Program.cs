@@ -103,4 +103,17 @@ if (args.Contains("--publish-forklift"))
     }
 }
 
+// Command-line option to verify production database
+if (args.Contains("--verify-db"))
+{
+    Console.WriteLine("\n🔍 Verifying Database...\n");
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<LmsDbContext>();
+        var verifier = new VerifyProductionData(db);
+        var success = await verifier.Run();
+        Environment.Exit(success ? 0 : 1);
+    }
+}
+
 app.Run();
