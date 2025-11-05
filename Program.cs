@@ -1,0 +1,60 @@
+using RTOWebLMS.Components;
+using RTOWebLMS.Data;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+
+// Configure database - support both SQLite (development) and PostgreSQL (production)
+var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "Sqlite";
+
+builder.Services.AddDbContext<LmsDbContext>(options =>
+{
+    if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
+    {
+        // Use PostgreSQL (Supabase) for production
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+        options.UseNpgsql(connectionString);
+    }
+    else
+    {
+        // Use SQLite for local development
+        var connectionString = builder.Configuration.GetConnectionString("SqliteConnection");
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            // Fallback to default SQLite path
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var dbPath = Path.Combine(appDataPath, "RTODesktopLMS", "rto_lms.db");
+            connectionString = $"Data Source={dbPath}";
+        }
+        options.UseSqlite(connectionString);
+    }
+});
+
+// Configure URLs for Railway deployment (uses PORT env variable)
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+
+app.UseAntiforgery();
+
+app.MapStaticAssets();
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
+
+app.Run();

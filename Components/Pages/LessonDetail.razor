@@ -1,0 +1,395 @@
+@page "/lesson/{lessonId}"
+@using Microsoft.EntityFrameworkCore
+@using RTOWebLMS.Data
+@using RTOWebLMS.Models
+@inject LmsDbContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>@(lesson?.Title ?? "Lesson") - RTO LMS</PageTitle>
+
+@if (lesson == null)
+{
+    <div class="text-center p-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container my-4">
+        <!-- Header with Gradient -->
+        <div class="lesson-header mb-4">
+            <h1 class="lesson-title">@lesson.Title</h1>
+
+            <div class="d-flex gap-3 flex-wrap">
+                <div class="badge-container">
+                    <span class="time-icon">⏱</span>
+                    <span class="duration-text">Duration: @(lesson.Duration > 0 ? $"{lesson.Duration} min" : "Not specified")</span>
+                </div>
+
+                @if (isCompleted)
+                {
+                    <div class="completed-badge">
+                        <span>✓ COMPLETED</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Images Slideshow Section -->
+        @if (lessonMedia.Any())
+        {
+            <div class="media-section mb-4">
+                <div class="section-header section-header-purple">
+                    <span>📸 LESSON MEDIA</span>
+                </div>
+
+                <div class="slideshow-container">
+                    <div class="image-display">
+                        <img src="file:///@lessonMedia[currentImageIndex].FilePath"
+                             alt="Lesson media @(currentImageIndex + 1)"
+                             class="img-fluid" />
+                    </div>
+
+                    <div class="slideshow-controls mt-3">
+                        <button class="btn btn-nav"
+                                disabled="@(currentImageIndex == 0)"
+                                @onclick="PreviousImage">
+                            ← Previous
+                        </button>
+
+                        <span class="image-counter">
+                            @(currentImageIndex + 1) / @lessonMedia.Count
+                        </span>
+
+                        <button class="btn btn-nav"
+                                disabled="@(currentImageIndex >= lessonMedia.Count - 1)"
+                                @onclick="NextImage">
+                            Next →
+                        </button>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(lessonMedia[currentImageIndex].Caption))
+                    {
+                        <p class="image-caption mt-2">@lessonMedia[currentImageIndex].Caption</p>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Lesson Content -->
+        <div class="content-section mb-4">
+            <div class="section-header section-header-teal">
+                <span>📖 LESSON CONTENT</span>
+            </div>
+
+            <div class="lesson-content">
+                @if (!string.IsNullOrEmpty(lesson.Content))
+                {
+                    <p>@lesson.Content</p>
+                }
+                else
+                {
+                    <p class="text-muted fst-italic">No content available for this lesson.</p>
+                }
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="action-footer">
+            <button class="btn btn-secondary" @onclick="GoBack">
+                ← Back to My Learning
+            </button>
+
+            <button class="btn btn-success"
+                    disabled="@(isCompleted || isMarkingComplete)"
+                    @onclick="MarkAsComplete">
+                @if (isMarkingComplete)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                @(isCompleted ? "✓ Already Completed" : "✓ Mark as Complete")
+            </button>
+        </div>
+    </div>
+}
+
+<style>
+    .lesson-header {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        color: white;
+    }
+
+    .lesson-title {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+    }
+
+    .badge-container {
+        background: white;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .time-icon {
+        font-size: 1.1rem;
+        color: #FF9800;
+    }
+
+    .duration-text {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #F57C00;
+    }
+
+    .completed-badge {
+        background: #4CAF50;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        color: white;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .media-section, .content-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .section-header {
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 1rem;
+        display: inline-block;
+    }
+
+    .section-header-purple {
+        background: #9C27B0;
+    }
+
+    .section-header-teal {
+        background: #00897B;
+    }
+
+    .slideshow-container {
+        background: #f5f5f5;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+
+    .image-display {
+        background: white;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        padding: 1rem;
+        min-height: 350px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .image-display img {
+        max-height: 350px;
+        object-fit: contain;
+    }
+
+    .slideshow-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .btn-nav {
+        background: #2196F3;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-weight: 600;
+        transition: background 0.2s;
+    }
+
+    .btn-nav:hover:not(:disabled) {
+        background: #1976D2;
+    }
+
+    .btn-nav:disabled {
+        background: #BDBDBD;
+        color: #757575;
+        cursor: not-allowed;
+    }
+
+    .image-counter {
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .image-caption {
+        color: #666;
+        font-style: italic;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+
+    .lesson-content {
+        font-size: 1rem;
+        line-height: 1.7;
+        color: #222;
+    }
+
+    .action-footer {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .btn-secondary {
+        background: #757575;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: background 0.2s;
+    }
+
+    .btn-secondary:hover {
+        background: #616161;
+    }
+
+    .btn-success {
+        background: #4CAF50;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: background 0.2s;
+    }
+
+    .btn-success:hover:not(:disabled) {
+        background: #388E3C;
+    }
+
+    .btn-success:disabled {
+        background: #BDBDBD;
+        color: #757575;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string LessonId { get; set; } = string.Empty;
+
+    [SupplyParameterFromQuery(Name = "enrollmentId")]
+    public string EnrollmentId { get; set; } = string.Empty;
+
+    private Lesson? lesson;
+    private Enrollment? enrollment;
+    private List<LessonMedia> lessonMedia = new();
+    private bool isCompleted;
+    private bool isMarkingComplete;
+    private int currentImageIndex = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        lesson = await DbContext.Lessons
+            .FirstOrDefaultAsync(l => l.Id == LessonId);
+
+        if (!string.IsNullOrEmpty(EnrollmentId))
+        {
+            enrollment = await DbContext.Enrollments
+                .Include(e => e.LessonProgress)
+                .FirstOrDefaultAsync(e => e.Id == EnrollmentId);
+
+            if (enrollment != null)
+            {
+                isCompleted = enrollment.LessonProgress
+                    .Any(lp => lp.LessonId == LessonId && lp.Completed);
+            }
+        }
+
+        lessonMedia = await DbContext.LessonMedia
+            .Where(lm => lm.LessonId == LessonId)
+            .OrderBy(lm => lm.OrderIndex)
+            .ToListAsync();
+    }
+
+    private void PreviousImage()
+    {
+        if (currentImageIndex > 0)
+        {
+            currentImageIndex--;
+        }
+    }
+
+    private void NextImage()
+    {
+        if (currentImageIndex < lessonMedia.Count - 1)
+        {
+            currentImageIndex++;
+        }
+    }
+
+    private async Task MarkAsComplete()
+    {
+        if (enrollment == null || isCompleted) return;
+
+        isMarkingComplete = true;
+
+        try
+        {
+            var lessonProgress = await DbContext.LessonProgress
+                .FirstOrDefaultAsync(lp => lp.LessonId == LessonId && lp.EnrollmentId == enrollment.Id);
+
+            if (lessonProgress == null)
+            {
+                lessonProgress = new LessonProgress
+                    {
+                        LessonId = LessonId,
+                        EnrollmentId = enrollment.Id,
+                        Completed = true,
+                        CompletedAt = DateTime.UtcNow
+                    };
+                DbContext.LessonProgress.Add(lessonProgress);
+            }
+            else
+            {
+                lessonProgress.Completed = true;
+                lessonProgress.CompletedAt = DateTime.UtcNow;
+                lessonProgress.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await DbContext.SaveChangesAsync();
+            isCompleted = true;
+        }
+        finally
+        {
+            isMarkingComplete = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/my-learning");
+    }
+}
