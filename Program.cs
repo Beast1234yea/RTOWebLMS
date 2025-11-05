@@ -77,43 +77,4 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Command-line options for data import
-if (args.Contains("--import-forklift"))
-{
-    Console.WriteLine("\n🚀 Running Forklift Course Import...\n");
-    using (var scope = app.Services.CreateScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<LmsDbContext>();
-        var importer = new ImportForkliftCourseSimple(db);
-        var success = await importer.Run();
-        Environment.Exit(success ? 0 : 1);
-    }
-}
-
-// Command-line option to publish the forklift course
-if (args.Contains("--publish-forklift"))
-{
-    Console.WriteLine("\n📢 Publishing Forklift Course...\n");
-    using (var scope = app.Services.CreateScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<LmsDbContext>();
-        var publisher = new PublishForkliftCourse(db);
-        var success = await publisher.Run();
-        Environment.Exit(success ? 0 : 1);
-    }
-}
-
-// Command-line option to verify production database
-if (args.Contains("--verify-db"))
-{
-    Console.WriteLine("\n🔍 Verifying Database...\n");
-    using (var scope = app.Services.CreateScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<LmsDbContext>();
-        var verifier = new VerifyProductionData(db);
-        var success = await verifier.Run();
-        Environment.Exit(success ? 0 : 1);
-    }
-}
-
 app.Run();
