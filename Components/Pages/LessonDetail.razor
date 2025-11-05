@@ -1,5 +1,6 @@
 @page "/lesson/{lessonId}"
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components
 @using RTOWebLMS.Data
 @using RTOWebLMS.Models
 @inject LmsDbContext DbContext
@@ -48,7 +49,7 @@ else
 
                 <div class="slideshow-container">
                     <div class="image-display">
-                        <img src="file:///@lessonMedia[currentImageIndex].FilePath"
+                        <img src="@lessonMedia[currentImageIndex].FilePath"
                              alt="Lesson media @(currentImageIndex + 1)"
                              class="img-fluid" />
                     </div>
@@ -88,7 +89,7 @@ else
             <div class="lesson-content">
                 @if (!string.IsNullOrEmpty(lesson.Content))
                 {
-                    <p>@lesson.Content</p>
+                    @((MarkupString)lesson.Content)
                 }
                 else
                 {

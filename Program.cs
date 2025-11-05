@@ -47,6 +47,17 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 var app = builder.Build();
 
+// Handle command-line arguments
+if (args.Length > 0 && args[0] == "--check-db")
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var context = scope.ServiceProvider.GetRequiredService<LmsDbContext>();
+        await CheckSupabase.Run(context);
+    }
+    return;
+}
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
