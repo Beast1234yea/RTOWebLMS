@@ -1,7 +1,9 @@
 using RTOWebLMS.Components;
 using RTOWebLMS.Data;
 using RTOWebLMS.Services;
+using RTOWebLMS.Utilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.StaticFiles;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,11 +57,50 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Configure static file serving with custom MIME types for 3D models
+var provider = new FileExtensionContentTypeProvider();
+provider.Mappings[".gltf"] = "model/gltf+json";
+provider.Mappings[".glb"] = "model/gltf-binary";
+provider.Mappings[".bin"] = "application/octet-stream";
+provider.Mappings[".jpg"] = "image/jpeg";
+provider.Mappings[".jpeg"] = "image/jpeg";
+provider.Mappings[".png"] = "image/png";
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = provider
+});
 
 app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// Command-line options for data import
+if (args.Contains("--import-forklift"))
+{
+    Console.WriteLine("\n🚀 Running Forklift Course Import...\n");
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<LmsDbContext>();
+        var importer = new ImportForkliftCourseSimple(db);
+        var success = await importer.Run();
+        Environment.Exit(success ? 0 : 1);
+    }
+}
+
+// Command-line option to publish the forklift course
+if (args.Contains("--publish-forklift"))
+{
+    Console.WriteLine("\n📢 Publishing Forklift Course...\n");
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<LmsDbContext>();
+        var publisher = new PublishForkliftCourse(db);
+        var success = await publisher.Run();
+        Environment.Exit(success ? 0 : 1);
+    }
+}
 
 app.Run();
