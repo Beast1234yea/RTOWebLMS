@@ -1,0 +1,106 @@
+@page "/debug/courses"
+@using Microsoft.EntityFrameworkCore
+@using RTOWebLMS.Data
+@using RTOWebLMS.Models
+@inject LmsDbContext DbContext
+@rendermode InteractiveServer
+
+<PageTitle>Debug - Courses in Database</PageTitle>
+
+<div class="container my-4">
+    <h1>🗄️ Database Debug - Courses</h1>
+    
+    @if (courses == null)
+    {
+        <p>Loading courses...</p>
+    }
+    else if (!courses.Any())
+    {
+        <div class="alert alert-warning">
+            <h4>❌ No Courses Found</h4>
+            <p>The database appears to be empty. You need to import course content:</p>
+            <ol>
+                <li>Stop the application (Ctrl+C)</li>
+                <li>Run the import script manually</li>
+                <li>Restart the application</li>
+            </ol>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-success">
+            <h4>✅ Found @courses.Count Course(s)</h4>
+        </div>
+        
+        @foreach (var course in courses)
+        {
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5>@course.Title (@course.UnitCode)</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Status:</strong> @course.Status</p>
+                    <p><strong>Description:</strong> @course.Description</p>
+                    <p><strong>Modules:</strong> @modulesByCourseDic.GetValueOrDefault(course.Id, new List<Module>()).Count</p>
+                    <p><strong>Total Lessons:</strong> @lessonsByCourseDict.GetValueOrDefault(course.Id, new List<Lesson>()).Count</p>
+                    
+                    @if (modulesByCourseDic.GetValueOrDefault(course.Id, new List<Module>()).Any())
+                    {
+                        <h6>Modules:</h6>
+                        <ul>
+                            @foreach (var module in modulesByCourseDic[course.Id])
+                            {
+                                <li>@module.Title (@lessonsByModuleDict.GetValueOrDefault(module.Id, new List<Lesson>()).Count lessons)</li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        }
+    }
+    
+    <div class="mt-4">
+        <h3>🚛 Quick Actions</h3>
+        <a href="/test-3d.html" class="btn btn-primary" target="_blank">Test 3D Forklift Model</a>
+        <a href="/" class="btn btn-secondary">Back to Home</a>
+    </div>
+</div>
+
+@code {
+    private List<Course>? courses;
+    private Dictionary<string, List<Module>> modulesByCourseDic = new();
+    private Dictionary<string, List<Lesson>> modulesByLessonDict = new();
+    private Dictionary<string, List<Lesson>> lessonsByCourseDict = new();
+    private Dictionary<string, List<Lesson>> lessonsByModuleDict = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        courses = await DbContext.Courses.ToListAsync();
+        
+        if (courses.Any())
+        {
+            var modules = await DbContext.Modules.ToListAsync();
+            var lessons = await DbContext.Lessons.ToListAsync();
+            
+            modulesByCourseDic = modules.GroupBy(m => m.CourseId).ToDictionary(g => g.Key, g => g.ToList());
+            lessonsByModuleDict = lessons.GroupBy(l => l.ModuleId).ToDictionary(g => g.Key, g => g.ToList());
+            
+            // Calculate lessons by course
+            foreach (var course in courses)
+            {
+                var courseLessons = new List<Lesson>();
+                if (modulesByCourseDic.ContainsKey(course.Id))
+                {
+                    foreach (var module in modulesByCourseDic[course.Id])
+                    {
+                        if (lessonsByModuleDict.ContainsKey(module.Id))
+                        {
+                            courseLessons.AddRange(lessonsByModuleDict[module.Id]);
+                        }
+                    }
+                }
+                lessonsByCourseDict[course.Id] = courseLessons;
+            }
+        }
+    }
+}
