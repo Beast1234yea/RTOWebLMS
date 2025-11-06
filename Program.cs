@@ -2,7 +2,6 @@ using RTOWebLMS.Components;
 using RTOWebLMS.Data;
 using RTOWebLMS.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.StaticFiles;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,19 +55,6 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Configure static file serving with custom MIME types for 3D models
-var provider = new FileExtensionContentTypeProvider();
-provider.Mappings[".gltf"] = "model/gltf+json";
-provider.Mappings[".glb"] = "model/gltf-binary";
-provider.Mappings[".bin"] = "application/octet-stream";
-provider.Mappings[".jpg"] = "image/jpeg";
-provider.Mappings[".jpeg"] = "image/jpeg";
-provider.Mappings[".png"] = "image/png";
-
-app.UseStaticFiles(new StaticFileOptions
-{
-    ContentTypeProvider = provider
-});
 
 app.UseAntiforgery();
 
