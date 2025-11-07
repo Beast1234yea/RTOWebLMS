@@ -97,6 +97,73 @@ else
             </div>
         </div>
 
+        <!-- Enhanced Interactive 3D Forklift with Clickable Parts -->
+        @if (lesson.Title != null && lesson.Title.ToLower().Contains("forklift"))
+        {
+            <div class="content-section mb-4">
+                <div class="section-header section-header-primary">
+                    <span>🚛 INTERACTIVE 3D FORKLIFT MODEL</span>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card border-primary">
+                            <div class="card-body p-0 position-relative" style="overflow: hidden; border-radius: 8px;">
+                                <div id="model-viewer-container" style="width: 100%; height: 500px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+                                    <model-viewer
+                                        id="forklift-model"
+                                        src="/models/forklift/FWS_Forklift_01_Blue.gltf"
+                                        alt="Interactive Blue Forklift 3D Model"
+                                        auto-rotate="true"
+                                        camera-controls="true"
+                                        environment-image="neutral"
+                                        style="width: 100%; height: 100%;">
+                                    </model-viewer>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">📚 Part Information</h6>
+                            </div>
+                            <div class="card-body">
+                                @if (selectedPartInfo != null)
+                                {
+                                    <div class="part-info-panel">
+                                        <h5 class="text-primary">@selectedPartInfo.Name</h5>
+                                        <p class="text-muted">@selectedPartInfo.Description</p>
+
+                                        <div class="safety-info bg-warning-subtle p-3 rounded mb-3">
+                                            <h6 class="text-warning">⚠️ Safety Information</h6>
+                                            <p class="mb-0 small">@selectedPartInfo.SafetyInfo</p>
+                                        </div>
+
+                                        <div class="operation-info bg-info-subtle p-3 rounded">
+                                            <h6 class="text-info">🔧 Operation</h6>
+                                            <p class="mb-0 small">@selectedPartInfo.OperationInfo</p>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-center text-muted">
+                                        <div class="fs-1 mb-3">🖱️</div>
+                                        <p><strong>Click on the colored buttons</strong> on the 3D model to learn about each forklift part!</p>
+                                        <div class="mt-3">
+                                            <small class="text-info">💡 You can rotate and zoom the model with your mouse</small>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
         <!-- Footer Actions -->
         <div class="action-footer">
             <button class="btn btn-secondary" @onclick="GoBack">
@@ -294,6 +361,46 @@ else
         background: #BDBDBD;
         color: #757575;
     }
+
+    /* 3D Model Styles */
+    .section-header-primary {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        font-weight: bold;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+    }
+
+    model-viewer {
+        border-radius: 8px;
+        box-shadow: inset 0 0 50px rgba(0,0,0,0.1);
+        width: 100% !important;
+        height: 500px !important;
+        display: block !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        --progress-bar-height: 5px;
+        --progress-bar-color: #4CAF50;
+    }
+
+    model-viewer::part(default-slot) {
+        background: inherit;
+    }
+
+    .card {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        transition: transform 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+    }
+
+    .part-info-panel {
+        opacity: 1;
+    }
 </style>
 
 @code {
@@ -309,6 +416,83 @@ else
     private bool isCompleted;
     private bool isMarkingComplete;
     private int currentImageIndex = 0;
+
+    // Interactive 3D Forklift Properties
+    private ForkliftPartInfo? selectedPartInfo;
+
+    // Forklift Part Information Class
+    public class ForkliftPartInfo
+    {
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string SafetyInfo { get; set; } = "";
+        public string OperationInfo { get; set; } = "";
+    }
+
+    // Part Information Database
+    private Dictionary<string, ForkliftPartInfo> forkliftParts = new()
+    {
+        {
+            "forks",
+            new ForkliftPartInfo
+            {
+                Name = "🔧 Forklift Forks",
+                Description = "The primary load-bearing components that slide under pallets and materials for lifting.",
+                SafetyInfo = "Always ensure forks are fully inserted under the load. Check for cracks or damage before use. Maximum capacity must not be exceeded.",
+                OperationInfo = "Use lift/lower controls to position forks at ground level. Drive forward until forks are completely under the load. Lift slightly to secure the load before moving."
+            }
+        },
+        {
+            "mast",
+            new ForkliftPartInfo
+            {
+                Name = "📏 Mast System",
+                Description = "The vertical assembly that raises and lowers the forks. Consists of main mast and secondary mast for extended reach.",
+                SafetyInfo = "Never exceed maximum lift height. Ensure overhead clearance. Be aware of mast tilt angles to prevent load spillage.",
+                OperationInfo = "Use hydraulic controls to extend mast. Tilt forward to engage load, tilt back to secure during transport. Lower mast completely when not in use."
+            }
+        },
+        {
+            "controls",
+            new ForkliftPartInfo
+            {
+                Name = "🎮 Control System",
+                Description = "Includes steering wheel, hydraulic levers, gear controls, and instrument panel for operating the forklift.",
+                SafetyInfo = "Always maintain proper seating position. Keep hands on controls during operation. Know location of emergency stop.",
+                OperationInfo = "Steering wheel controls direction. Hydraulic levers control mast and fork movement. Use gentle movements for precise control."
+            }
+        },
+        {
+            "wheels",
+            new ForkliftPartInfo
+            {
+                Name = "🛞 Wheel Assembly",
+                Description = "Front wheels provide steering and support. Rear wheels are typically smaller and provide stability during turns.",
+                SafetyInfo = "Check tire pressure and tread before operation. Ensure wheels are free of debris. Be aware of turning radius limitations.",
+                OperationInfo = "Front wheels steer the forklift. Rear wheels pivot for tight turning radius. Drive slowly in tight spaces and when turning."
+            }
+        },
+        {
+            "body",
+            new ForkliftPartInfo
+            {
+                Name = "🏗️ Forklift Body",
+                Description = "The main chassis containing the engine, counterweight, operator compartment, and safety features.",
+                SafetyInfo = "Always wear seatbelt if equipped. Check overhead guard for damage. Ensure counterweight is secure and undamaged.",
+                OperationInfo = "Body houses engine and provides counterweight for load stability. Contains fuel tank, hydraulic reservoir, and electrical systems."
+            }
+        }
+    };
+
+    // Method to show part information
+    private void ShowPartInfo(string partKey)
+    {
+        if (forkliftParts.ContainsKey(partKey))
+        {
+            selectedPartInfo = forkliftParts[partKey];
+            StateHasChanged();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
