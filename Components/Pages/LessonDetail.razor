@@ -79,6 +79,67 @@ else
             </div>
         }
 
+        <!-- Forklift Introduction Section (appears first for forklift lessons) -->
+        @if (lesson.Title != null && lesson.Title.ToLower().Contains("forklift"))
+        {
+            <div class="content-section mb-4">
+                <div class="section-header section-header-teal">
+                    <span>📖 INTRODUCTION</span>
+                </div>
+
+                <div class="lesson-content">
+                    <h3 class="text-primary fw-bold mb-3">1.1 INTRODUCTION</h3>
+                    <p>This training course is based on the National High Risk Licence Units of Competence <strong>TLILIC0003 Licence To Operate A Forklift Truck</strong></p>
+
+                    <p>The National Standard for Licensing Persons Performing High Risk Work aims to facilitate the operation of a nationally uniform, competency-based licensing system for persons performing certain types of high risk work.</p>
+
+                    <p>The National Standard recognises the importance of quality training as an underpinning principle in providing skilled workers, and that the most effective form of training is a combination of informal and formal training methods. It requires training and assessment to be undertaken by a Registered Training Organisation (RTO).</p>
+
+                    <h4 class="text-primary fw-bold mt-4 mb-3">You will learn about:</h4>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">✓ Planning and preparing for operations.</li>
+                        <li class="mb-2">✓ Conducting pre-operational and post-operational checks.</li>
+                        <li class="mb-2">✓ Attaching, securing, lifting, carrying and placing materials and loads.</li>
+                        <li class="mb-2">✓ Conducting Post-Operational Checks</li>
+                        <li class="mb-2">✓ Park up procedure.</li>
+                    </ul>
+
+                    <h3 class="text-primary fw-bold mt-5 mb-3">WHAT IS A FORKLIFT?</h3>
+                    <p class="lead">A forklift is a powered industrial truck equipped with a mast and an elevating load carriage to which is attached a pair of fork arms or another attachment.</p>
+
+                    <h3 class="text-primary fw-bold mt-5 mb-3">PARTS OF A FORKLIFT</h3>
+                    <p>It is important that you understand the different parts and controls of a forklift. Below is a diagram outlining some important parts of a forklift:</p>
+
+                    <div class="parts-list mt-4 p-4 bg-light rounded">
+                        <h5 class="text-primary mb-3">KEY COMPONENTS:</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><strong>A.</strong> Forks/Tynes</li>
+                                    <li class="mb-2"><strong>B.</strong> Load Backrest</li>
+                                    <li class="mb-2"><strong>C.</strong> Carriage</li>
+                                    <li class="mb-2"><strong>D.</strong> Mast</li>
+                                    <li class="mb-2"><strong>E.</strong> Hydraulic Lift Ram</li>
+                                    <li class="mb-2"><strong>F.</strong> Overhead Guard</li>
+                                    <li class="mb-2"><strong>G.</strong> Lights & Horn</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><strong>H.</strong> Steering and Lever Controls</li>
+                                    <li class="mb-2"><strong>I.</strong> Hydraulic Tilt Ram</li>
+                                    <li class="mb-2"><strong>J.</strong> Drive Wheels</li>
+                                    <li class="mb-2"><strong>K.</strong> Rear/Steering Wheels</li>
+                                    <li class="mb-2"><strong>L.</strong> Counter Balance</li>
+                                    <li class="mb-2"><strong>M.</strong> Operator's Seat</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
         <!-- Lesson Content -->
         <div class="content-section mb-4">
             <div class="section-header section-header-teal">
