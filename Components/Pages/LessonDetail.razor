@@ -118,6 +118,27 @@ else
                                         camera-controls="true"
                                         environment-image="neutral"
                                         style="width: 100%; height: 100%;">
+
+                                        <!-- Clickable Hotspots -->
+                                        <button class="hotspot" slot="hotspot-1" data-position="0.5m 0.2m 0m" data-normal="0m 1m 0m" @onclick='() => ShowPartInfo("forks")'>
+                                            <div class="annotation">🔧 Forks</div>
+                                        </button>
+
+                                        <button class="hotspot" slot="hotspot-2" data-position="0m 0.8m 0m" data-normal="0m 1m 0m" @onclick='() => ShowPartInfo("mast")'>
+                                            <div class="annotation">📏 Mast</div>
+                                        </button>
+
+                                        <button class="hotspot" slot="hotspot-3" data-position="0m 0.5m -0.3m" data-normal="0m 0m -1m" @onclick='() => ShowPartInfo("controls")'>
+                                            <div class="annotation">🎮 Controls</div>
+                                        </button>
+
+                                        <button class="hotspot" slot="hotspot-4" data-position="0.4m 0m 0.4m" data-normal="0m -1m 0m" @onclick='() => ShowPartInfo("wheels")'>
+                                            <div class="annotation">🛞 Wheels</div>
+                                        </button>
+
+                                        <button class="hotspot" slot="hotspot-5" data-position="0m 0.3m 0m" data-normal="0m 0m 1m" @onclick='() => ShowPartInfo("body")'>
+                                            <div class="annotation">🏗️ Body</div>
+                                        </button>
                                     </model-viewer>
                                 </div>
                             </div>
@@ -400,6 +421,42 @@ else
 
     .part-info-panel {
         opacity: 1;
+    }
+
+    /* Hotspot Styles */
+    .hotspot {
+        display: block;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .hotspot:hover {
+        background: rgba(33, 150, 243, 0.95);
+        transform: scale(1.2);
+        box-shadow: 0 4px 12px rgba(33, 150, 243, 0.5);
+    }
+
+    .hotspot .annotation {
+        font-size: 14px;
+        font-weight: bold;
+        color: #2196F3;
+        white-space: nowrap;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+    }
+
+    .hotspot:hover .annotation {
+        color: white;
     }
 </style>
 
