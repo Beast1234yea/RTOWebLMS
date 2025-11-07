@@ -1,0 +1,202 @@
+@page "/admin/add-3d"
+@using Microsoft.EntityFrameworkCore
+@using RTOWebLMS.Data
+@using RTOWebLMS.Models
+@inject LmsDbContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Add 3D Content - RTO LMS</PageTitle>
+
+<div class="container my-4">
+    <h1 class="mb-4">Add 3D Content to Lessons</h1>
+
+    @if (message != null)
+    {
+        <div class="alert @(isError ? "alert-danger" : "alert-success")">
+            @message
+        </div>
+    }
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h3>Test 3D Forklift Model</h3>
+        </div>
+        <div class="card-body">
+            <p>Preview of the 3D forklift model:</p>
+            <model-viewer
+                src="/models/forklift/FWS_Forklift_01_Blue.gltf"
+                alt="Blue Forklift 3D Model"
+                auto-rotate
+                camera-controls
+                environment-image="neutral"
+                style="width: 100%; height: 400px; background-color: #f5f5f5; border-radius: 8px;">
+            </model-viewer>
+            <p class="mt-2 text-muted">
+                <small>🖱️ Click and drag to rotate | 🔍 Scroll to zoom</small>
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h3>Add 3D Model to a Lesson</h3>
+        </div>
+        <div class="card-body">
+            @if (lessons == null)
+            {
+                <p>Loading lessons...</p>
+            }
+            else if (!lessons.Any())
+            {
+                <p>No lessons found. Please create a course first.</p>
+            }
+            else
+            {
+                <div class="mb-3">
+                    <label class="form-label">Select a lesson:</label>
+                    <select class="form-select" @bind="selectedLessonId">
+                        <option value="">-- Select a lesson --</option>
+                        @foreach (var lesson in lessons)
+                        {
+                            <option value="@lesson.Id">@lesson.Title (@lesson.Module?.Title)</option>
+                        }
+                    </select>
+                </div>
+
+                <button class="btn btn-success"
+                        @onclick="Add3DForklift"
+                        disabled="@(string.IsNullOrEmpty(selectedLessonId) || isProcessing)">
+                    @if (isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Add 3D Forklift Model
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h3>3D Model HTML Code</h3>
+        </div>
+        <div class="card-body">
+            <p>Copy this code to manually add to any lesson content:</p>
+            <pre class="bg-light p-3 rounded"><code>&lt;div style='margin: 20px 0; padding: 20px; border: 2px solid #007bff; border-radius: 10px; background: #f8f9fa;'&gt;
+    &lt;h3 style='color: #007bff;'&gt;🚛 Interactive 3D Forklift Model&lt;/h3&gt;
+
+    &lt;model-viewer
+        src='/models/forklift/FWS_Forklift_01_Blue.gltf'
+        alt='Blue Forklift 3D Model'
+        auto-rotate
+        camera-controls
+        environment-image='neutral'
+        style='width: 100%; height: 500px; border-radius: 8px;'&gt;
+    &lt;/model-viewer&gt;
+
+    &lt;div style='margin-top: 15px; padding: 10px; background: white; border-radius: 5px;'&gt;
+        &lt;p&gt;&lt;strong&gt;Controls:&lt;/strong&gt;&lt;/p&gt;
+        &lt;ul&gt;
+            &lt;li&gt;🖱️ Click and drag to rotate&lt;/li&gt;
+            &lt;li&gt;🔍 Scroll to zoom in/out&lt;/li&gt;
+            &lt;li&gt;📱 Touch and pinch on mobile&lt;/li&gt;
+        &lt;/ul&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Lesson>? lessons;
+    private string? selectedLessonId;
+    private string? message;
+    private bool isError;
+    private bool isProcessing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        lessons = await DbContext.Lessons
+            .Include(l => l.Module)
+            .OrderBy(l => l.Module!.Title)
+            .ThenBy(l => l.OrderIndex)
+            .ToListAsync();
+    }
+
+    private async Task Add3DForklift()
+    {
+        if (string.IsNullOrEmpty(selectedLessonId)) return;
+
+        isProcessing = true;
+        message = null;
+
+        try
+        {
+            var lesson = await DbContext.Lessons.FindAsync(selectedLessonId);
+            if (lesson == null)
+            {
+                message = "Lesson not found";
+                isError = true;
+                return;
+            }
+
+            var html3D = @"
+<div style='margin: 20px 0; padding: 20px; border: 2px solid #007bff; border-radius: 10px; background: #f8f9fa;'>
+    <h3 style='color: #007bff; margin-bottom: 15px;'>🚛 Interactive 3D Forklift Model</h3>
+
+    <model-viewer
+        src='/models/forklift/FWS_Forklift_01_Blue.gltf'
+        alt='Blue Forklift 3D Model'
+        auto-rotate
+        camera-controls
+        environment-image='neutral'
+        shadow-intensity='1'
+        style='width: 100%; height: 500px; background-color: #e3f2fd; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);'>
+    </model-viewer>
+
+    <div style='margin-top: 15px; padding: 15px; background: white; border-radius: 5px;'>
+        <p><strong>🎮 Interactive Controls:</strong></p>
+        <ul style='margin-bottom: 0;'>
+            <li>🖱️ <strong>Click and drag</strong> to rotate the forklift</li>
+            <li>🔍 <strong>Scroll wheel</strong> to zoom in/out</li>
+            <li>📱 <strong>Touch and pinch</strong> on mobile devices</li>
+            <li>🔄 Model auto-rotates when idle</li>
+        </ul>
+    </div>
+</div>
+
+<div style='margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;'>
+    <h4 style='color: #856404; margin-bottom: 10px;'>📚 Study the Model</h4>
+    <p style='margin-bottom: 10px;'>Examine the 3D forklift model and identify the key components:</p>
+    <ul style='color: #856404;'>
+        <li><strong>Forks</strong> - Load-bearing arms</li>
+        <li><strong>Mast</strong> - Vertical lifting mechanism</li>
+        <li><strong>Cab</strong> - Operator compartment</li>
+        <li><strong>Counterweight</strong> - Balance system</li>
+        <li><strong>Wheels</strong> - Front steering, rear drive</li>
+    </ul>
+</div>
+";
+
+            // Append 3D content to existing content
+            lesson.Content = (lesson.Content ?? "") + html3D;
+            lesson.UpdatedAt = DateTime.UtcNow;
+
+            await DbContext.SaveChangesAsync();
+
+            message = $"✅ Successfully added 3D forklift model to '{lesson.Title}'!";
+            isError = false;
+            selectedLessonId = null;
+        }
+        catch (Exception ex)
+        {
+            message = $"Error: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+}

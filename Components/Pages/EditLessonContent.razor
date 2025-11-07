@@ -1,0 +1,238 @@
+@page "/admin/edit-lesson"
+@using Microsoft.EntityFrameworkCore
+@using RTOWebLMS.Data
+@using RTOWebLMS.Models
+@inject LmsDbContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Edit Lesson Content - RTO LMS</PageTitle>
+
+<div class="container my-4">
+    <h1 class="mb-4">Edit Lesson Content</h1>
+
+    @if (message != null)
+    {
+        <div class="alert @(isError ? "alert-danger" : "alert-success")">
+            @message
+        </div>
+    }
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h3>Select Lesson to Edit</h3>
+        </div>
+        <div class="card-body">
+            @if (lessons == null)
+            {
+                <p>Loading lessons...</p>
+            }
+            else if (!lessons.Any())
+            {
+                <p>No lessons found.</p>
+            }
+            else
+            {
+                <div class="mb-3">
+                    <label class="form-label"><strong>Choose a lesson:</strong></label>
+                    <select class="form-select" @bind="selectedLessonId" @bind:after="LoadLessonContent">
+                        <option value="">-- Select a lesson --</option>
+                        @foreach (var lesson in lessons)
+                        {
+                            var moduleName = lesson.Module?.Title ?? "No Module";
+                            <option value="@lesson.Id">@moduleName - @lesson.Title</option>
+                        }
+                    </select>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(selectedLessonId) && selectedLesson != null)
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h3>Edit: @selectedLesson.Title</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label"><strong>Lesson Content (HTML):</strong></label>
+                    <textarea class="form-control"
+                              @bind="lessonContent"
+                              rows="20"
+                              style="font-family: monospace; font-size: 14px;"
+                              placeholder="Paste or type HTML content here..."></textarea>
+                    <small class="text-muted">You can paste HTML code here, including 3D models, interactive content, etc.</small>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success" @onclick="SaveContent" disabled="@isProcessing">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        💾 Save Changes
+                    </button>
+
+                    <button class="btn btn-secondary" @onclick="ReloadContent">
+                        🔄 Reload Original
+                    </button>
+
+                    <button class="btn btn-danger" @onclick="ClearContent">
+                        🗑️ Clear All
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h3>Preview</h3>
+            </div>
+            <div class="card-body">
+                <div class="preview-box">
+                    @((MarkupString)(lessonContent ?? "No content to preview"))
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="card mt-4">
+        <div class="card-header bg-warning">
+            <h3>Quick Templates</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>3D Forklift Model:</strong></p>
+            <button class="btn btn-sm btn-outline-primary mb-3" @onclick="() => InsertTemplate(template3D)">
+                📋 Copy 3D Model Code
+            </button>
+
+            <p><strong>Interactive Quiz:</strong></p>
+            <button class="btn btn-sm btn-outline-primary mb-3" @onclick="() => InsertTemplate(templateQuiz)">
+                📋 Copy Quiz Code
+            </button>
+
+            <p><strong>Simple Text Section:</strong></p>
+            <button class="btn btn-sm btn-outline-primary" @onclick="() => InsertTemplate(templateText)">
+                📋 Copy Text Template
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .preview-box {
+        border: 1px solid #ddd;
+        padding: 20px;
+        border-radius: 8px;
+        background: white;
+        min-height: 200px;
+    }
+</style>
+
+@code {
+    private List<Lesson>? lessons;
+    private string? selectedLessonId;
+    private Lesson? selectedLesson;
+    private string? lessonContent;
+    private string? message;
+    private bool isError;
+    private bool isProcessing;
+
+    private string template3D = @"
+<div style='margin: 20px 0; padding: 20px; border: 2px solid #007bff; border-radius: 10px; background: #f8f9fa;'>
+    <h3 style='color: #007bff;'>🚛 Interactive 3D Forklift Model</h3>
+    <model-viewer src='/models/forklift/FWS_Forklift_01_Blue.gltf' alt='Forklift' auto-rotate camera-controls environment-image='neutral' style='width: 100%; height: 500px;'></model-viewer>
+    <div style='margin-top: 15px; padding: 10px; background: white; border-radius: 5px;'>
+        <p><strong>Controls:</strong> Click and drag to rotate • Scroll to zoom • Touch and pinch on mobile</p>
+    </div>
+</div>";
+
+    private string templateQuiz = @"
+<div style='margin: 20px 0; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;'>
+    <h4 style='color: #856404;'>📋 Knowledge Check</h4>
+    <p><strong>Question: What should you check before operating a forklift?</strong></p>
+    <label style='display: block;'><input type='radio' name='q1'> Option A</label>
+    <label style='display: block;'><input type='radio' name='q1'> Option B</label>
+    <label style='display: block;'><input type='radio' name='q1'> Option C (Correct)</label>
+</div>";
+
+    private string templateText = @"
+<div style='margin: 20px 0; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);'>
+    <h3 style='color: #2196F3;'>Section Title</h3>
+    <p>Your content goes here...</p>
+    <ul>
+        <li>Point 1</li>
+        <li>Point 2</li>
+        <li>Point 3</li>
+    </ul>
+</div>";
+
+    protected override async Task OnInitializedAsync()
+    {
+        lessons = await DbContext.Lessons
+            .Include(l => l.Module)
+            .OrderBy(l => l.Module!.Title)
+            .ThenBy(l => l.OrderIndex)
+            .ToListAsync();
+    }
+
+    private async Task LoadLessonContent()
+    {
+        if (string.IsNullOrEmpty(selectedLessonId)) return;
+
+        selectedLesson = await DbContext.Lessons.FindAsync(selectedLessonId);
+        if (selectedLesson != null)
+        {
+            lessonContent = selectedLesson.Content ?? "";
+        }
+    }
+
+    private async Task SaveContent()
+    {
+        if (selectedLesson == null) return;
+
+        isProcessing = true;
+        message = null;
+
+        try
+        {
+            selectedLesson.Content = lessonContent;
+            selectedLesson.UpdatedAt = DateTime.UtcNow;
+            await DbContext.SaveChangesAsync();
+
+            message = $"✅ Successfully saved content for '{selectedLesson.Title}'!";
+            isError = false;
+        }
+        catch (Exception ex)
+        {
+            message = $"❌ Error: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task ReloadContent()
+    {
+        await LoadLessonContent();
+        message = "🔄 Content reloaded from database";
+        isError = false;
+    }
+
+    private void ClearContent()
+    {
+        lessonContent = "";
+        message = "🗑️ Content cleared. Click Save to update the lesson.";
+        isError = false;
+    }
+
+    private void InsertTemplate(string template)
+    {
+        lessonContent = (lessonContent ?? "") + "\n\n" + template;
+        message = "📋 Template added! Scroll down to see it, then click Save.";
+        isError = false;
+    }
+}
