@@ -9,7 +9,9 @@
       "Bash(robocopy \"C:\\Users\\nickb\\Projects\\RTOWebLMS\" \"C:\\Users\\nickb\\OneDrive\\RTOWebLMS\" /E /Z /R:3 /W:5)",
       "Bash(mv:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nSimplify app architecture and switch to PostgreSQL database\n\n- Remove 3D forklift interactive features and test code from LessonDetail page\n- Switch rendering mode to InteractiveServer for lesson detail\n- Update database provider from SQLite to PostgreSQL in configuration\n- Simplify Program.cs startup code by removing seed data logic\n- Update Blazor script from blazor.server.js to blazor.web.js\n- Remove content formatting functions in favor of direct content rendering\n- Add new pages: Add3DContent.razor and EditLessonContent.razor\n- Disable browser auto-launch in development settings\n- Add project documentation files and workspace configuration\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nSimplify app architecture and switch to PostgreSQL database\n\n- Remove 3D forklift interactive features and test code from LessonDetail page\n- Switch rendering mode to InteractiveServer for lesson detail\n- Update database provider from SQLite to PostgreSQL in configuration\n- Simplify Program.cs startup code by removing seed data logic\n- Update Blazor script from blazor.server.js to blazor.web.js\n- Remove content formatting functions in favor of direct content rendering\n- Add new pages: Add3DContent.razor and EditLessonContent.razor\n- Disable browser auto-launch in development settings\n- Add project documentation files and workspace configuration\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
