@@ -2810,26 +2810,23 @@ else
             </div>
         }
 
-        <!-- Lesson Content (hidden for forklift lessons as content is in chapters above) -->
-        @if (lesson.Title == null || !lesson.Title.ToLower().Contains("forklift"))
-        {
-            <div class="content-section mb-4">
-                <div class="section-header section-header-teal">
-                    <span>📖 LESSON CONTENT</span>
-                </div>
-
-                <div class="lesson-content">
-                    @if (!string.IsNullOrEmpty(lesson.Content))
-                    {
-                        @((MarkupString)lesson.Content)
-                    }
-                    else
-                    {
-                        <p class="text-muted fst-italic">No content available for this lesson.</p>
-                    }
-                </div>
+        <!-- Lesson Content -->
+        <div class="content-section mb-4">
+            <div class="section-header section-header-teal">
+                <span>📖 LESSON CONTENT</span>
             </div>
-        }
+
+            <div class="lesson-content">
+                @if (!string.IsNullOrEmpty(lesson.Content))
+                {
+                    @((MarkupString)lesson.Content)
+                }
+                else
+                {
+                    <p class="text-muted fst-italic">No content available for this lesson.</p>
+                }
+            </div>
+        </div>
 
         <!-- Enhanced Interactive 3D Forklift with Clickable Parts -->
         @if (lesson.Title != null && lesson.Title.ToLower().Contains("forklift"))
