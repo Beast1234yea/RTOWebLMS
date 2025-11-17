@@ -1,6 +1,7 @@
 @page "/login"
-@using RTOWebLMS.Services
-@inject AuthenticationService AuthService
+@using RTOWebLMS.Models
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<User> SignInManager
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
@@ -79,11 +80,6 @@
         </div>
     </div>
 
-    <div class="demo-info mt-4">
-        <div class="alert alert-info">
-            <strong>Demo Mode:</strong> This is a demonstration. In production, this would integrate with proper authentication.
-        </div>
-    </div>
 </div>
 
 <style>
@@ -184,23 +180,36 @@
 
         try
         {
-            var result = await AuthService.LoginAsync(email, password);
+            // Use ASP.NET Core Identity for authentication
+            var result = await SignInManager.PasswordSignInAsync(
+                email,
+                password,
+                rememberMe,
+                lockoutOnFailure: true
+            );
 
-            if (result.IsSuccess)
+            if (result.Succeeded)
             {
-                // In production, this would set authentication cookies/tokens
                 successMessage = "Login successful! Redirecting...";
-                await Task.Delay(1000);
-                Navigation.NavigateTo("/dashboard");
+                await Task.Delay(500);
+                Navigation.NavigateTo("/dashboard", forceLoad: true);
+            }
+            else if (result.IsLockedOut)
+            {
+                errorMessage = "Account locked due to multiple failed login attempts. Please try again in 15 minutes.";
+            }
+            else if (result.RequiresTwoFactor)
+            {
+                errorMessage = "Two-factor authentication required.";
             }
             else
             {
-                errorMessage = result.ErrorMessage;
+                errorMessage = "Invalid email or password.";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"An error occurred: {ex.Message}";
+            errorMessage = $"An error occurred during login: {ex.Message}";
         }
         finally
         {

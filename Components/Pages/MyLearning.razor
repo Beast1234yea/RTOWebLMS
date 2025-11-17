@@ -1,7 +1,9 @@
 @page "/my-learning"
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using RTOWebLMS.Data
 @using RTOWebLMS.Models
+@attribute [Authorize]
 @inject LmsDbContext DbContext
 @inject NavigationManager Navigation
 @rendermode InteractiveServer

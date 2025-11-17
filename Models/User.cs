@@ -1,29 +1,27 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Identity;
 using RTOWebLMS.Enums;
 
 namespace RTOWebLMS.Models
 {
-    public class User
+    /// <summary>
+    /// Application user extending ASP.NET Core Identity with RTO-specific fields
+    /// Inherits authentication and security features from IdentityUser
+    /// </summary>
+    public class User : IdentityUser
     {
-        [Key]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
         // Multi-tenancy: Each user belongs to one RTO (Tenant)
         [Required]
         public string TenantId { get; set; } = string.Empty;
 
+        // Display name (separate from UserName used for login)
         [Required]
         [MaxLength(255)]
         public string Name { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(255)]
-        public string Email { get; set; } = string.Empty;
-
-        [MaxLength(255)]
-        public string? PasswordHash { get; set; }
+        // Note: Email and PasswordHash inherited from IdentityUser
 
         public UserRole Role { get; set; } = UserRole.STUDENT;
 

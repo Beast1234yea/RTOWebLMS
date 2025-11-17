@@ -1,8 +1,10 @@
 @page "/courses"
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using RTOWebLMS.Data
 @using RTOWebLMS.Models
 @using RTOWebLMS.Enums
+@attribute [Authorize]
 @inject LmsDbContext DbContext
 @inject NavigationManager Navigation
 @rendermode InteractiveServer

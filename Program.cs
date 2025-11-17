@@ -2,6 +2,8 @@ using RTOWebLMS.Components;
 using RTOWebLMS.Data;
 using RTOWebLMS.Services;
 using RTOWebLMS.Middleware;
+using RTOWebLMS.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +18,31 @@ builder.Services.AddScoped<AuditLogService>();
 
 // Register multi-tenancy services
 builder.Services.AddScoped<ITenantService, TenantService>();
+
+// Configure ASP.NET Core Identity
+builder.Services.AddIdentity<User, IdentityRole>(options =>
+{
+    // Password requirements (RTO compliance)
+    options.Password.RequireDigit = true;
+    options.Password.RequiredLength = 8;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireLowercase = true;
+
+    // User requirements
+    options.User.RequireUniqueEmail = true;
+
+    // Lockout settings (security)
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.AllowedForNewUsers = true;
+
+    // Sign-in settings
+    options.SignIn.RequireConfirmedEmail = false; // Can enable later with email service
+    options.SignIn.RequireConfirmedAccount = false;
+})
+.AddEntityFrameworkStores<LmsDbContext>()
+.AddDefaultTokenProviders();
 
 // Configure database - support both SQLite (development) and PostgreSQL (production)
 var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "Sqlite";
@@ -71,6 +98,10 @@ app.UseHttpsRedirection();
 
 // Resolve tenant before any auth/processing
 app.UseTenantResolution();
+
+// Authentication and authorization (after tenant resolution, before pages)
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 

@@ -1,7 +1,11 @@
 @page "/register"
+@using RTOWebLMS.Models
 @using RTOWebLMS.Services
 @using RTOWebLMS.Enums
-@inject AuthenticationService AuthService
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<User> UserManager
+@inject SignInManager<User> SignInManager
+@inject ITenantService TenantService
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
@@ -56,9 +60,9 @@
                            class="form-control"
                            id="password"
                            @bind="password"
-                           placeholder="Enter a password (min 6 characters)"
+                           placeholder="Enter a password (min 8 characters)"
                            required />
-                    <small class="form-text text-muted">Password must be at least 6 characters long.</small>
+                    <small class="form-text text-muted">Password must be at least 8 characters with uppercase, lowercase, digit, and special character.</small>
                 </div>
 
                 <div class="form-group mb-3">
@@ -102,11 +106,6 @@
         </div>
     </div>
 
-    <div class="demo-info mt-4">
-        <div class="alert alert-info">
-            <strong>Demo Mode:</strong> Registration will create a student account in the demo database.
-        </div>
-    </div>
 </div>
 
 <style>
@@ -228,9 +227,9 @@
                 return;
             }
 
-            if (password.Length < 6)
+            if (password.Length < 8)
             {
-                errorMessage = "Password must be at least 6 characters long.";
+                errorMessage = "Password must be at least 8 characters long.";
                 return;
             }
 
@@ -246,23 +245,43 @@
                 return;
             }
 
-            // Register user
-            var result = await AuthService.RegisterAsync(name, email, password, UserRole.STUDENT);
+            // Get current tenant ID (required for multi-tenancy)
+            var tenantId = TenantService.GetCurrentTenantId();
+            if (string.IsNullOrEmpty(tenantId))
+            {
+                errorMessage = "Unable to determine tenant. Please contact support.";
+                return;
+            }
 
-            if (result.IsSuccess)
+            // Create new user with ASP.NET Core Identity
+            var user = new User
+            {
+                UserName = email,
+                Email = email,
+                Name = name,
+                Role = UserRole.STUDENT,
+                TenantId = tenantId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            var result = await UserManager.CreateAsync(user, password);
+
+            if (result.Succeeded)
             {
                 successMessage = "Registration successful! Redirecting to login...";
-                await Task.Delay(2000);
+                await Task.Delay(1500);
                 Navigation.NavigateTo("/login");
             }
             else
             {
-                errorMessage = result.ErrorMessage;
+                // Display Identity error messages
+                errorMessage = string.Join(", ", result.Errors.Select(e => e.Description));
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"An error occurred: {ex.Message}";
+            errorMessage = $"An error occurred during registration: {ex.Message}";
         }
         finally
         {

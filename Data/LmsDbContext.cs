@@ -1,10 +1,14 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using RTOWebLMS.Models;
 using RTOWebLMS.Services;
 
 namespace RTOWebLMS.Data
 {
-    public class LmsDbContext : DbContext
+    /// <summary>
+    /// Database context for the RTO LMS with ASP.NET Core Identity and multi-tenancy support
+    /// </summary>
+    public class LmsDbContext : IdentityDbContext<User>
     {
         private readonly ITenantService? _tenantService;
 
