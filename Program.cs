@@ -87,8 +87,12 @@ builder.Services.AddDbContext<LmsDbContext>(options =>
 });
 
 // Configure URLs for Railway deployment (uses PORT env variable)
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+// Only override URLs if PORT is explicitly set (production/Railway)
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 var app = builder.Build();
 
