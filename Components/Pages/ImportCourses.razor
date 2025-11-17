@@ -1,0 +1,325 @@
+@page "/import-courses"
+@using Microsoft.EntityFrameworkCore
+@using RTOWebLMS.Data
+@using RTOWebLMS.Utilities
+@inject LmsDbContext DbContext
+@inject NavigationManager Navigation
+
+<PageTitle>Import Courses</PageTitle>
+
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h3>Import Courses from Backup</h3>
+        </div>
+        <div class="card-body">
+            @if (isComplete)
+            {
+                <div class="alert alert-success">
+                    <h4>✅ Import Complete!</h4>
+                    <p>Successfully imported @importedCount courses</p>
+                    <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    <h4>❌ Error</h4>
+                    <p>@errorMessage</p>
+                    <button class="btn btn-warning" @onclick="LoadBackups">Refresh</button>
+                </div>
+            }
+            else if (isImporting)
+            {
+                <div class="alert alert-info">
+                    <h4>⏳ Importing...</h4>
+                    <p>@statusMessage</p>
+                </div>
+            }
+            else if (backups.Count > 0)
+            {
+                <p>Found @backups.Count backup(s). Select one to import courses:</p>
+                <div class="list-group mb-3">
+                    @foreach (var backup in backups)
+                    {
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>@backup.Name</strong>
+                                    <br/>
+                                    <small class="text-muted">Created: @backup.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss")</small>
+                                    <br/>
+                                    <small class="text-muted">Size: @FormatFileSize(backup.Size)</small>
+                                </div>
+                                <button class="btn btn-primary" @onclick="() => ImportFromBackup(backup.Path)">
+                                    Import
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    <h4>⚠️ No Backups Found</h4>
+                    <p>No database backups found at:</p>
+                    <code>@backupPath</code>
+                    <br/><br/>
+                    <p>If you have a backup elsewhere, copy it to the folder above.</p>
+                    <button class="btn btn-secondary" @onclick="LoadBackups">Refresh</button>
+                </div>
+            }
+
+            @if (logs.Count > 0)
+            {
+                <div class="mt-4">
+                    <h5>Import Log:</h5>
+                    <pre class="bg-light p-3 border" style="max-height: 400px; overflow-y: auto;">@string.Join("\n", logs)</pre>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<BackupInfo> backups = new();
+    private bool isImporting = false;
+    private bool isComplete = false;
+    private string? errorMessage = null;
+    private string statusMessage = "";
+    private List<string> logs = new();
+    private int importedCount = 0;
+    private string backupPath = "";
+
+    protected override void OnInitialized()
+    {
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        backupPath = Path.Combine(appDataPath, "RTODesktopLMS", "backup");
+        LoadBackups();
+    }
+
+    private void LoadBackups()
+    {
+        backups.Clear();
+        errorMessage = null;
+
+        try
+        {
+            if (Directory.Exists(backupPath))
+            {
+                var files = Directory.GetFiles(backupPath, "*.db");
+                foreach (var file in files)
+                {
+                    var fileInfo = new FileInfo(file);
+                    backups.Add(new BackupInfo
+                    {
+                        Name = fileInfo.Name,
+                        Path = file,
+                        CreatedDate = fileInfo.CreationTime,
+                        Size = fileInfo.Length
+                    });
+                }
+
+                backups = backups.OrderByDescending(b => b.CreatedDate).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading backups: {ex.Message}";
+        }
+    }
+
+    private async Task ImportFromBackup(string backupFilePath)
+    {
+        isImporting = true;
+        isComplete = false;
+        errorMessage = null;
+        logs.Clear();
+        importedCount = 0;
+        StateHasChanged();
+
+        try
+        {
+            Log($"Starting import from: {Path.GetFileName(backupFilePath)}");
+            statusMessage = "Checking backup file...";
+            StateHasChanged();
+            await Task.Delay(100);
+
+            if (!File.Exists(backupFilePath))
+            {
+                throw new Exception("Backup file not found");
+            }
+
+            Log("✅ Backup file found");
+
+            // Check if default tenant exists
+            statusMessage = "Checking database setup...";
+            StateHasChanged();
+            await Task.Delay(100);
+
+            var tenant = await DbContext.Tenants.FirstOrDefaultAsync(t => t.Id == "default-tenant");
+            if (tenant == null)
+            {
+                throw new Exception("Default tenant not found. Run /setup first.");
+            }
+
+            Log($"✅ Target tenant: {tenant.Name}");
+
+            // Create connection to backup database
+            statusMessage = "Connecting to backup database...";
+            StateHasChanged();
+            await Task.Delay(100);
+
+            var optionsBuilder = new DbContextOptionsBuilder<LmsDbContext>();
+            optionsBuilder.UseSqlite($"Data Source={backupFilePath}");
+
+            using var backupContext = new LmsDbContext(optionsBuilder.Options);
+
+            var courseCount = await backupContext.Courses.CountAsync();
+            Log($"📊 Found {courseCount} courses in backup");
+
+            if (courseCount == 0)
+            {
+                Log("ℹ️  No courses to import");
+                isComplete = true;
+                return;
+            }
+
+            statusMessage = "Loading courses from backup...";
+            StateHasChanged();
+            await Task.Delay(100);
+
+            var courses = await backupContext.Courses
+                .Include(c => c.Modules)
+                    .ThenInclude(m => m.Lessons)
+                .ToListAsync();
+
+            Log($"🔄 Importing {courses.Count} courses...");
+
+            foreach (var course in courses)
+            {
+                statusMessage = $"Importing: {course.Title}";
+                StateHasChanged();
+                await Task.Delay(50);
+
+                // Check if already exists
+                var exists = await DbContext.Courses.AnyAsync(c => c.Slug == course.Slug);
+                if (exists)
+                {
+                    Log($"   ⏭️  Skipping (already exists): {course.Title}");
+                    continue;
+                }
+
+                // Create new course
+                var newCourse = new Course
+                {
+                    Id = course.Id,
+                    TenantId = tenant.Id,
+                    Title = course.Title,
+                    Slug = course.Slug,
+                    Description = course.Description,
+                    UnitCode = course.UnitCode,
+                    Level = course.Level,
+                    Duration = course.Duration,
+                    IsPublished = course.IsPublished,
+                    ThumbnailUrl = course.ThumbnailUrl,
+                    InstructorId = course.InstructorId,
+                    CreatedAt = course.CreatedAt,
+                    UpdatedAt = course.UpdatedAt
+                };
+
+                DbContext.Courses.Add(newCourse);
+                Log($"   ✅ Imported: {course.Title}");
+                importedCount++;
+
+                // Import modules
+                foreach (var module in course.Modules.OrderBy(m => m.OrderIndex))
+                {
+                    var newModule = new Module
+                    {
+                        Id = module.Id,
+                        TenantId = tenant.Id,
+                        CourseId = newCourse.Id,
+                        Title = module.Title,
+                        Description = module.Description,
+                        OrderIndex = module.OrderIndex,
+                        CreatedAt = module.CreatedAt,
+                        UpdatedAt = module.UpdatedAt
+                    };
+
+                    DbContext.Modules.Add(newModule);
+                    Log($"      ➕ Module: {module.Title}");
+
+                    // Import lessons
+                    foreach (var lesson in module.Lessons.OrderBy(l => l.OrderIndex))
+                    {
+                        var newLesson = new Lesson
+                        {
+                            Id = lesson.Id,
+                            TenantId = tenant.Id,
+                            ModuleId = newModule.Id,
+                            Title = lesson.Title,
+                            Content = lesson.Content,
+                            LessonType = lesson.LessonType,
+                            OrderIndex = lesson.OrderIndex,
+                            Duration = lesson.Duration,
+                            IsPublished = lesson.IsPublished,
+                            VideoUrl = lesson.VideoUrl,
+                            QuizId = lesson.QuizId,
+                            SimulationId = lesson.SimulationId,
+                            CreatedAt = lesson.CreatedAt,
+                            UpdatedAt = lesson.UpdatedAt
+                        };
+
+                        DbContext.Lessons.Add(newLesson);
+                    }
+                }
+            }
+
+            statusMessage = "Saving to database...";
+            StateHasChanged();
+            await Task.Delay(100);
+
+            await DbContext.SaveChangesAsync();
+            Log($"✅ Successfully imported {importedCount} courses!");
+            isComplete = true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Log($"❌ Error: {ex.Message}");
+        }
+        finally
+        {
+            isImporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Log(string message)
+    {
+        logs.Add($"[{DateTime.Now:HH:mm:ss}] {message}");
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private class BackupInfo
+    {
+        public string Name { get; set; } = "";
+        public string Path { get; set; } = "";
+        public DateTime CreatedDate { get; set; }
+        public long Size { get; set; }
+    }
+}
