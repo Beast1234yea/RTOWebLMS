@@ -161,7 +161,6 @@
                 Log("✅ Admin user created successfully");
                 Log($"   Email: {adminEmail}");
                 Log($"   Password: Admin123!");
-                setupComplete = true;
             }
             else
             {
@@ -169,7 +168,41 @@
                 throw new Exception($"Failed to create admin user: {errors}");
             }
 
+            // Auto-restore courses from backup if available
+            statusMessage = "Checking for course backups...";
+            StateHasChanged();
+            await Task.Delay(100);
+
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var backupPath = Path.Combine(appDataPath, "RTODesktopLMS", "backup");
+
+            if (Directory.Exists(backupPath))
+            {
+                var backupFiles = Directory.GetFiles(backupPath, "*.db");
+                if (backupFiles.Length > 0)
+                {
+                    Log($"📦 Found {backupFiles.Length} backup file(s)");
+                    var latestBackup = backupFiles.OrderByDescending(f => new FileInfo(f).CreationTime).First();
+                    Log($"📂 Using latest backup: {Path.GetFileName(latestBackup)}");
+
+                    statusMessage = "Restoring courses from backup...";
+                    StateHasChanged();
+                    await Task.Delay(100);
+
+                    await RestoreCoursesFromBackup(latestBackup, tenant);
+                }
+                else
+                {
+                    Log("ℹ️  No backup files found");
+                }
+            }
+            else
+            {
+                Log("ℹ️  Backup folder does not exist");
+            }
+
             statusMessage = "Setup complete!";
+            setupComplete = true;
         }
         catch (Exception ex)
         {
@@ -180,6 +213,110 @@
         {
             isRunning = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task RestoreCoursesFromBackup(string backupFilePath, Tenant tenant)
+    {
+        try
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<LmsDbContext>();
+            optionsBuilder.UseSqlite($"Data Source={backupFilePath}");
+
+            using var backupContext = new LmsDbContext(optionsBuilder.Options);
+
+            var courseCount = await backupContext.Courses.CountAsync();
+            Log($"📊 Found {courseCount} courses in backup");
+
+            if (courseCount == 0)
+            {
+                Log("ℹ️  No courses to restore");
+                return;
+            }
+
+            var courses = await backupContext.Courses
+                .Include(c => c.Modules)
+                    .ThenInclude(m => m.Lessons)
+                .ToListAsync();
+
+            int imported = 0;
+            foreach (var course in courses)
+            {
+                var exists = await DbContext.Courses.AnyAsync(c => c.Slug == course.Slug);
+                if (exists)
+                {
+                    Log($"   ⏭️  Skipping: {course.Title} (already exists)");
+                    continue;
+                }
+
+                var newCourse = new Course
+                {
+                    Id = course.Id,
+                    TenantId = tenant.Id,
+                    Title = course.Title,
+                    Slug = course.Slug,
+                    Description = course.Description,
+                    UnitCode = course.UnitCode,
+                    Level = course.Level,
+                    Duration = course.Duration,
+                    IsPublished = course.IsPublished,
+                    ThumbnailUrl = course.ThumbnailUrl,
+                    InstructorId = course.InstructorId,
+                    CreatedAt = course.CreatedAt,
+                    UpdatedAt = course.UpdatedAt
+                };
+
+                DbContext.Courses.Add(newCourse);
+                Log($"   ✅ Restoring: {course.Title}");
+                imported++;
+
+                foreach (var module in course.Modules.OrderBy(m => m.OrderIndex))
+                {
+                    var newModule = new Module
+                    {
+                        Id = module.Id,
+                        TenantId = tenant.Id,
+                        CourseId = newCourse.Id,
+                        Title = module.Title,
+                        Description = module.Description,
+                        OrderIndex = module.OrderIndex,
+                        CreatedAt = module.CreatedAt,
+                        UpdatedAt = module.UpdatedAt
+                    };
+
+                    DbContext.Modules.Add(newModule);
+
+                    foreach (var lesson in module.Lessons.OrderBy(l => l.OrderIndex))
+                    {
+                        var newLesson = new Lesson
+                        {
+                            Id = lesson.Id,
+                            TenantId = tenant.Id,
+                            ModuleId = newModule.Id,
+                            Title = lesson.Title,
+                            Content = lesson.Content,
+                            LessonType = lesson.LessonType,
+                            OrderIndex = lesson.OrderIndex,
+                            Duration = lesson.Duration,
+                            IsPublished = lesson.IsPublished,
+                            VideoUrl = lesson.VideoUrl,
+                            QuizId = lesson.QuizId,
+                            SimulationId = lesson.SimulationId,
+                            CreatedAt = lesson.CreatedAt,
+                            UpdatedAt = lesson.UpdatedAt
+                        };
+
+                        DbContext.Lessons.Add(newLesson);
+                    }
+                }
+            }
+
+            await DbContext.SaveChangesAsync();
+            Log($"✅ Successfully restored {imported} courses!");
+        }
+        catch (Exception ex)
+        {
+            Log($"❌ Error restoring courses: {ex.Message}");
         }
     }
 
