@@ -27,6 +27,11 @@ bld/
 
 # Production configuration (contains secrets)
 appsettings.Production.json
+appsettings.*.json
+!appsettings.Development.json
+.env
+.env.*
+*.env
 
 # Migration and utility folders (not needed for deployment)
 DataMigration.disabled/

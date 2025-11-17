@@ -10,6 +10,10 @@ namespace RTOWebLMS.Models
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
+        // Multi-tenancy: Each user belongs to one RTO (Tenant)
+        [Required]
+        public string TenantId { get; set; } = string.Empty;
+
         [Required]
         [MaxLength(255)]
         public string Name { get; set; } = string.Empty;
@@ -95,6 +99,7 @@ namespace RTOWebLMS.Models
         public string? StudentNumber { get; set; }
 
         // Navigation Properties
+        public virtual Tenant? Tenant { get; set; }
         public virtual ICollection<Course> InstructorCourses { get; set; } = new List<Course>();
         public virtual ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
         public virtual ICollection<Certificate> Certificates { get; set; } = new List<Certificate>();

@@ -11,6 +11,10 @@ namespace RTOWebLMS.Models
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
+        // Multi-tenancy: Each course belongs to one RTO (Tenant)
+        [Required]
+        public string TenantId { get; set; } = string.Empty;
+
         [Required]
         [MaxLength(255)]
         public string Title { get; set; } = string.Empty;
@@ -64,6 +68,8 @@ namespace RTOWebLMS.Models
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation Properties
+        public virtual Tenant? Tenant { get; set; }
+
         [ForeignKey("InstructorId")]
         public virtual User? Instructor { get; set; }
 

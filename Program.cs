@@ -21,7 +21,17 @@ builder.Services.AddDbContext<LmsDbContext>(options =>
     if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
     {
         // Use PostgreSQL (Supabase) for production
-        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+        // Try environment variable first, then appsettings
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+            ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+
+        if (string.IsNullOrEmpty(connectionString) || connectionString.Contains("PLACEHOLDER"))
+        {
+            throw new InvalidOperationException(
+                "PostgreSQL connection string is not configured. " +
+                "Set 'ConnectionStrings__DefaultConnection' environment variable.");
+        }
+
         options.UseNpgsql(connectionString);
     }
     else
