@@ -3,11 +3,12 @@
 @using RTOWebLMS.Services
 @using RTOWebLMS.Enums
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Web
 @inject UserManager<User> UserManager
 @inject SignInManager<User> SignInManager
 @inject ITenantService TenantService
 @inject NavigationManager Navigation
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <PageTitle>Register - RTO LMS</PageTitle>
 

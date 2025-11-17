@@ -1,5 +1,6 @@
 @page "/dashboard"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Web
 @using Microsoft.EntityFrameworkCore
 @using RTOWebLMS.Data
 @using RTOWebLMS.Models
@@ -7,7 +8,7 @@
 @attribute [Authorize]
 @inject LmsDbContext DbContext
 @inject NavigationManager Navigation
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <PageTitle>Dashboard - RTO LMS</PageTitle>
 

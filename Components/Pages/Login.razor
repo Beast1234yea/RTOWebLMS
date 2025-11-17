@@ -1,9 +1,10 @@
 @page "/login"
 @using RTOWebLMS.Models
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Web
 @inject SignInManager<User> SignInManager
 @inject NavigationManager Navigation
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <PageTitle>Login - RTO LMS</PageTitle>
 
