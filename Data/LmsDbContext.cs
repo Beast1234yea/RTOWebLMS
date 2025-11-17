@@ -1,12 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using RTOWebLMS.Models;
+using RTOWebLMS.Services;
 
 namespace RTOWebLMS.Data
 {
     public class LmsDbContext : DbContext
     {
-        public LmsDbContext(DbContextOptions<LmsDbContext> options) : base(options)
+        private readonly ITenantService? _tenantService;
+
+        public LmsDbContext(DbContextOptions<LmsDbContext> options, ITenantService? tenantService = null) : base(options)
         {
+            _tenantService = tenantService;
         }
 
         // DbSets for all entities
@@ -57,6 +61,32 @@ namespace RTOWebLMS.Data
                 .WithMany(t => t.Courses)
                 .HasForeignKey(c => c.TenantId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // ===== GLOBAL QUERY FILTERS FOR TENANT ISOLATION =====
+            // Automatically filter all queries by current tenant
+            var tenantId = _tenantService?.GetCurrentTenantId();
+
+            if (!string.IsNullOrEmpty(tenantId))
+            {
+                modelBuilder.Entity<User>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<Course>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<Module>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<Lesson>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<Enrollment>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<LessonProgress>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<Quiz>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<QuizQuestion>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<QuizAnswer>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<QuizAttempt>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<Assessment>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<Competency>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<Certificate>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<UnitySimulation>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<SimulationResult>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<Document>().HasQueryFilter(e => e.TenantId == tenantId);
+                modelBuilder.Entity<LessonMedia>().HasQueryFilter(e => e.TenantId == tenantId);
+                // Note: AuditLog allows "system" tenant for platform-wide logs
+            }
 
             // ===== EXISTING CONFIGURATION =====
 

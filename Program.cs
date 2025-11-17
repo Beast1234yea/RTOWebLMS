@@ -1,6 +1,7 @@
 using RTOWebLMS.Components;
 using RTOWebLMS.Data;
 using RTOWebLMS.Services;
+using RTOWebLMS.Middleware;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +13,9 @@ builder.Services.AddRazorComponents()
 // Register application services
 builder.Services.AddScoped<AuthenticationService>();
 builder.Services.AddScoped<AuditLogService>();
+
+// Register multi-tenancy services
+builder.Services.AddScoped<ITenantService, TenantService>();
 
 // Configure database - support both SQLite (development) and PostgreSQL (production)
 var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "Sqlite";
@@ -65,6 +69,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Resolve tenant before any auth/processing
+app.UseTenantResolution();
 
 app.UseAntiforgery();
 
