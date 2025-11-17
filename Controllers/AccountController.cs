@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Antiforgery;
 using RTOWebLMS.Models;
 
 namespace RTOWebLMS.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[IgnoreAntiforgeryToken]
 public class AccountController : ControllerBase
 {
     private readonly SignInManager<User> _signInManager;
