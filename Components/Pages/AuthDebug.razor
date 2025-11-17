@@ -1,0 +1,53 @@
+@page "/auth-debug"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+
+<PageTitle>Auth Debug</PageTitle>
+
+<h3>Authentication Debug Info</h3>
+
+<div class="card p-4">
+    @if (authState == null)
+    {
+        <p>Loading authentication state...</p>
+    }
+    else
+    {
+        <h4>Authentication State:</h4>
+        <ul>
+            <li><strong>Is Authenticated:</strong> @authState.User.Identity?.IsAuthenticated</li>
+            <li><strong>User Name:</strong> @authState.User.Identity?.Name</li>
+            <li><strong>Authentication Type:</strong> @authState.User.Identity?.AuthenticationType</li>
+            <li><strong>Claims Count:</strong> @authState.User.Claims.Count()</li>
+        </ul>
+
+        <h4>All Claims:</h4>
+        <ul>
+            @foreach (var claim in authState.User.Claims)
+            {
+                <li>@claim.Type: @claim.Value</li>
+            }
+        </ul>
+
+        <h4>AuthorizeView Test:</h4>
+        <AuthorizeView>
+            <Authorized>
+                <div class="alert alert-success">✅ AuthorizeView sees you as AUTHORIZED</div>
+                <p>User: @context.User.Identity?.Name</p>
+            </Authorized>
+            <NotAuthorized>
+                <div class="alert alert-danger">❌ AuthorizeView sees you as NOT AUTHORIZED</div>
+            </NotAuthorized>
+        </AuthorizeView>
+    }
+</div>
+
+@code {
+    private AuthenticationState? authState;
+
+    protected override async Task OnInitializedAsync()
+    {
+        authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    }
+}
