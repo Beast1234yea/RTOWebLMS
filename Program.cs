@@ -15,6 +15,9 @@ builder.Services.AddRazorComponents()
 // Add cascading authentication state (required for Blazor Server + Identity)
 builder.Services.AddCascadingAuthenticationState();
 
+// Register Identity authentication state provider for Blazor Server
+builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+
 // Register application services
 builder.Services.AddScoped<AuthenticationService>();
 builder.Services.AddScoped<AuditLogService>();
