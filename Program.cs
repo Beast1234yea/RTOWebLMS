@@ -105,7 +105,10 @@ if (app.Environment.IsDevelopment())
         try
         {
             var context = services.GetRequiredService<LmsDbContext>();
-            DbInitializer.Initialize(context);
+            var userManager = services.GetRequiredService<UserManager<User>>();
+            var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+            await DbInitializer.InitializeAsync(context, userManager, roleManager);
         }
         catch (Exception ex)
         {
