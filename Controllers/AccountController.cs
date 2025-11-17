@@ -96,6 +96,49 @@ public class AccountController : ControllerBase
         _logger.LogInformation("User logged out");
         return Ok(new { success = true, message = "Logout successful" });
     }
+
+    [HttpGet("status")]
+    public async Task<IActionResult> Status([FromServices] UserManager<User> userManager, [FromServices] RTOWebLMS.Data.LmsDbContext context)
+    {
+        try
+        {
+            var adminUser = await userManager.FindByEmailAsync("admin@localhost.com");
+            var userCount = context.Users.Count();
+            var tenantCount = context.Tenants.Count();
+            var dbPath = context.Database.GetConnectionString();
+
+            return Ok(new
+            {
+                timestamp = DateTime.UtcNow,
+                database = new
+                {
+                    connectionString = dbPath,
+                    canConnect = context.Database.CanConnect(),
+                    tenants = tenantCount,
+                    users = userCount
+                },
+                adminUser = adminUser != null ? new
+                {
+                    exists = true,
+                    email = adminUser.Email,
+                    emailConfirmed = adminUser.EmailConfirmed,
+                    tenantId = adminUser.TenantId,
+                    roles = await userManager.GetRolesAsync(adminUser)
+                } : new
+                {
+                    exists = false,
+                    email = (string?)null,
+                    emailConfirmed = false,
+                    tenantId = (string?)null,
+                    roles = new string[0]
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+        }
+    }
 }
 
 public class LoginRequest

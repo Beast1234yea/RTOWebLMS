@@ -11,11 +11,17 @@ public static class DbInitializer
 {
     public static async Task InitializeAsync(LmsDbContext context, UserManager<User> userManager, RoleManager<IdentityRole> roleManager)
     {
+        Console.WriteLine("╔═════════════════════════════════════════════════════════════╗");
+        Console.WriteLine("║         DATABASE INITIALIZER STARTING                       ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════╝");
+
         // Setup paths
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var dbPath = Path.Combine(appDataPath, "RTODesktopLMS", "rto_lms.db");
         var backupPath = Path.Combine(appDataPath, "RTODesktopLMS", "backup");
         string? backupFile = null;
+
+        Console.WriteLine($"📂 Database path: {dbPath}");
 
         // Check if database exists and if it's the old schema (without Identity)
         if (File.Exists(dbPath))
@@ -52,7 +58,9 @@ public static class DbInitializer
         }
 
         // Ensure database is created (will create new one if we deleted the old one)
+        Console.WriteLine("🔨 Ensuring database is created...");
         context.Database.EnsureCreated();
+        Console.WriteLine("✅ Database creation ensured");
 
         // Check if default tenant exists, create if not
         if (!context.Tenants.Any(t => t.Id == "default-tenant"))
@@ -152,5 +160,9 @@ public static class DbInitializer
                 Console.WriteLine($"ℹ️  Migration skipped - database already has {existingCourseCount} courses");
             }
         }
+
+        Console.WriteLine("╔═════════════════════════════════════════════════════════════╗");
+        Console.WriteLine("║         DATABASE INITIALIZER COMPLETED                      ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════╝\n");
     }
 }
