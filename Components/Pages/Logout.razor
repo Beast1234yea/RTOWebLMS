@@ -1,9 +1,11 @@
 @page "/logout"
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Web
 @using RTOWebLMS.Models
-@inject SignInManager<User> SignInManager
+@using System.Net.Http.Json
+@inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <PageTitle>Logging Out - RTO LMS</PageTitle>
 
@@ -56,7 +58,11 @@
     {
         try
         {
-            await SignInManager.SignOutAsync();
+            var httpClient = HttpClientFactory.CreateClient();
+            httpClient.BaseAddress = new Uri(Navigation.BaseUri);
+
+            var response = await httpClient.PostAsync("/api/account/logout", null);
+
             await Task.Delay(500); // Brief delay for user feedback
             Navigation.NavigateTo("/", forceLoad: true);
         }

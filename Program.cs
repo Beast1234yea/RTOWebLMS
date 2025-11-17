@@ -12,6 +12,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Add controllers for API endpoints (login/logout)
+builder.Services.AddControllers();
+
+// Add HttpClient for Blazor components
+builder.Services.AddHttpClient();
+
 // Add cascading authentication state (required for Blazor Server + Identity)
 builder.Services.AddCascadingAuthenticationState();
 
@@ -138,6 +144,7 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+app.MapControllers();  // Map API controllers for login/logout
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

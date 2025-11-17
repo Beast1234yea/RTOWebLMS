@@ -2,7 +2,9 @@
 @using RTOWebLMS.Models
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Components.Web
-@inject SignInManager<User> SignInManager
+@using System.Net.Http.Json
+@using System.Text.Json
+@inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager Navigation
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
@@ -181,31 +183,28 @@
 
         try
         {
-            // Use ASP.NET Core Identity for authentication
-            var result = await SignInManager.PasswordSignInAsync(
-                email,
-                password,
-                rememberMe,
-                lockoutOnFailure: true
-            );
+            var httpClient = HttpClientFactory.CreateClient();
+            httpClient.BaseAddress = new Uri(Navigation.BaseUri);
 
-            if (result.Succeeded)
+            var loginRequest = new
+            {
+                Email = email,
+                Password = password,
+                RememberMe = rememberMe
+            };
+
+            var response = await httpClient.PostAsJsonAsync("/api/account/login", loginRequest);
+
+            if (response.IsSuccessStatusCode)
             {
                 successMessage = "Login successful! Redirecting...";
                 await Task.Delay(500);
                 Navigation.NavigateTo("/dashboard", forceLoad: true);
             }
-            else if (result.IsLockedOut)
-            {
-                errorMessage = "Account locked due to multiple failed login attempts. Please try again in 15 minutes.";
-            }
-            else if (result.RequiresTwoFactor)
-            {
-                errorMessage = "Two-factor authentication required.";
-            }
             else
             {
-                errorMessage = "Invalid email or password.";
+                var errorResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                errorMessage = errorResponse?.Message ?? "Login failed. Please try again.";
             }
         }
         catch (Exception ex)
@@ -216,5 +215,11 @@
         {
             isLoading = false;
         }
+    }
+
+    private class LoginResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = "";
     }
 }
