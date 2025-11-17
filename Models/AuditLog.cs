@@ -12,6 +12,10 @@ namespace RTOWebLMS.Models
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
+        // Multi-tenancy: Most audit logs belong to tenant (system logs use special tenant)
+        [Required]
+        public string TenantId { get; set; } = "system"; // Default to "system" for system-wide logs
+
         [Required]
         [MaxLength(50)]
         public string Action { get; set; } = string.Empty;
@@ -39,6 +43,8 @@ namespace RTOWebLMS.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation Properties
+        public virtual Tenant? Tenant { get; set; }
+
         [ForeignKey("UserId")]
         public virtual User? User { get; set; }
     }

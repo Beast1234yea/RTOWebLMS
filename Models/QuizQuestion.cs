@@ -8,7 +8,11 @@ namespace RTOWebLMS.Models
     public class QuizQuestion
     {
         [Key]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Id { get; set} = Guid.NewGuid().ToString();
+
+        // Multi-tenancy: Inherited from Quiz
+        [Required]
+        public string TenantId { get; set; } = string.Empty;
 
         [Required]
         public string Question { get; set; } = string.Empty;
@@ -28,6 +32,8 @@ namespace RTOWebLMS.Models
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation Properties
+        public virtual Tenant? Tenant { get; set; }
+
         [ForeignKey("QuizId")]
         public virtual Quiz? Quiz { get; set; }
 

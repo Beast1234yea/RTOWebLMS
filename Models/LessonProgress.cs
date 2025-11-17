@@ -9,6 +9,10 @@ namespace RTOWebLMS.Models
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
+        // Multi-tenancy: Inherited from Enrollment/Lesson
+        [Required]
+        public string TenantId { get; set; } = string.Empty;
+
         public bool Completed { get; set; } = false;
 
         public int TimeSpent { get; set; } = 0;
@@ -26,6 +30,8 @@ namespace RTOWebLMS.Models
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation Properties
+        public virtual Tenant? Tenant { get; set; }
+
         [ForeignKey("EnrollmentId")]
         public virtual Enrollment? Enrollment { get; set; }
 

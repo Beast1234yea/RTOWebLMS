@@ -10,6 +10,10 @@ namespace RTOWebLMS.Models
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
+        // Multi-tenancy: Certificate belongs to tenant
+        [Required]
+        public string TenantId { get; set; } = string.Empty;
+
         [Required]
         [MaxLength(50)]
         public string CertificateNumber { get; set; } = string.Empty;
@@ -41,6 +45,8 @@ namespace RTOWebLMS.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation Properties
+        public virtual Tenant? Tenant { get; set; }
+
         [ForeignKey("UserId")]
         public virtual User? User { get; set; }
 

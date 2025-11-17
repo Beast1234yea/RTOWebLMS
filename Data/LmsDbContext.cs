@@ -10,6 +10,7 @@ namespace RTOWebLMS.Data
         }
 
         // DbSets for all entities
+        public DbSet<Tenant> Tenants { get; set; }  // Multi-tenancy core
         public DbSet<User> Users { get; set; }
         public DbSet<Course> Courses { get; set; }
         public DbSet<Module> Modules { get; set; }
@@ -32,6 +33,32 @@ namespace RTOWebLMS.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // ===== MULTI-TENANCY CONFIGURATION =====
+
+            // Tenant indexes
+            modelBuilder.Entity<Tenant>()
+                .HasIndex(t => t.Subdomain)
+                .IsUnique();
+
+            modelBuilder.Entity<Tenant>()
+                .HasIndex(t => t.RTOCode);
+
+            // Tenant -> Users
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.Tenant)
+                .WithMany(t => t.Users)
+                .HasForeignKey(u => u.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Tenant -> Courses
+            modelBuilder.Entity<Course>()
+                .HasOne(c => c.Tenant)
+                .WithMany(t => t.Courses)
+                .HasForeignKey(c => c.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ===== EXISTING CONFIGURATION =====
 
             // Configure unique indexes
             modelBuilder.Entity<User>()

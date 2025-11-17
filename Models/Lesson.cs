@@ -11,6 +11,10 @@ namespace RTOWebLMS.Models
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
+        // Multi-tenancy: Inherited from Module/Course for query performance
+        [Required]
+        public string TenantId { get; set; } = string.Empty;
+
         [Required]
         [MaxLength(255)]
         public string Title { get; set; } = string.Empty;
@@ -51,6 +55,8 @@ namespace RTOWebLMS.Models
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation Properties
+        public virtual Tenant? Tenant { get; set; }
+
         [ForeignKey("ModuleId")]
         public virtual Module? Module { get; set; }
 
