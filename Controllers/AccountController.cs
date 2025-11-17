@@ -56,6 +56,39 @@ public class AccountController : ControllerBase
         }
     }
 
+    [HttpPost("login-form")]
+    public async Task<IActionResult> LoginForm([FromForm] string email, [FromForm] string password, [FromForm] bool rememberMe = false)
+    {
+        try
+        {
+            var result = await _signInManager.PasswordSignInAsync(
+                email,
+                password,
+                rememberMe,
+                lockoutOnFailure: true
+            );
+
+            if (result.Succeeded)
+            {
+                _logger.LogInformation("User {Email} logged in successfully via form", email);
+                return Redirect("/dashboard");
+            }
+            else if (result.IsLockedOut)
+            {
+                return Redirect("/login?error=locked");
+            }
+            else
+            {
+                return Redirect("/login?error=invalid");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during form login for {Email}", email);
+            return Redirect("/login?error=server");
+        }
+    }
+
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
