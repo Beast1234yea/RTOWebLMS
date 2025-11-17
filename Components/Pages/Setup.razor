@@ -1,0 +1,191 @@
+@page "/setup"
+@using Microsoft.AspNetCore.Identity
+@using RTOWebLMS.Models
+@using RTOWebLMS.Data
+@inject UserManager<User> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject LmsDbContext DbContext
+
+<PageTitle>Database Setup</PageTitle>
+
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h3>Database Setup</h3>
+        </div>
+        <div class="card-body">
+            @if (setupComplete)
+            {
+                <div class="alert alert-success">
+                    <h4>✅ Setup Complete!</h4>
+                    <p><strong>Admin User Created:</strong></p>
+                    <ul>
+                        <li><strong>Email:</strong> admin@localhost.com</li>
+                        <li><strong>Password:</strong> Admin123!</li>
+                    </ul>
+                    <a href="/login" class="btn btn-primary">Go to Login</a>
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    <h4>❌ Error</h4>
+                    <p>@errorMessage</p>
+                    <button class="btn btn-warning" @onclick="RunSetup">Try Again</button>
+                </div>
+            }
+            else if (isRunning)
+            {
+                <div class="alert alert-info">
+                    <h4>⏳ Running Setup...</h4>
+                    <p>@statusMessage</p>
+                </div>
+            }
+            else
+            {
+                <p>This will create the database, default tenant, and admin user.</p>
+                <button class="btn btn-primary" @onclick="RunSetup">Run Setup</button>
+            }
+
+            @if (logs.Count > 0)
+            {
+                <div class="mt-4">
+                    <h5>Setup Log:</h5>
+                    <pre class="bg-light p-3 border">@string.Join("\n", logs)</pre>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool setupComplete = false;
+    private bool isRunning = false;
+    private string? errorMessage = null;
+    private string statusMessage = "";
+    private List<string> logs = new();
+
+    private async Task RunSetup()
+    {
+        setupComplete = false;
+        isRunning = true;
+        errorMessage = null;
+        logs.Clear();
+
+        try
+        {
+            Log("Starting database setup...");
+            statusMessage = "Creating database...";
+            StateHasChanged();
+            await Task.Delay(100);
+
+            // Ensure database exists
+            DbContext.Database.EnsureCreated();
+            Log("✅ Database created");
+
+            // Create default tenant
+            statusMessage = "Creating default tenant...";
+            StateHasChanged();
+            await Task.Delay(100);
+
+            var tenant = DbContext.Tenants.FirstOrDefault(t => t.Id == "default-tenant");
+            if (tenant == null)
+            {
+                tenant = new Tenant
+                {
+                    Id = "default-tenant",
+                    Name = "Default Organization",
+                    Domain = "localhost",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsActive = true
+                };
+                DbContext.Tenants.Add(tenant);
+                await DbContext.SaveChangesAsync();
+                Log("✅ Default tenant created");
+            }
+            else
+            {
+                Log("ℹ️  Default tenant already exists");
+            }
+
+            // Create roles
+            statusMessage = "Creating roles...";
+            StateHasChanged();
+            await Task.Delay(100);
+
+            foreach (var roleName in new[] { "Admin", "Instructor", "Student" })
+            {
+                if (!await RoleManager.RoleExistsAsync(roleName))
+                {
+                    await RoleManager.CreateAsync(new IdentityRole(roleName));
+                    Log($"✅ Role '{roleName}' created");
+                }
+                else
+                {
+                    Log($"ℹ️  Role '{roleName}' already exists");
+                }
+            }
+
+            // Create or reset admin user
+            statusMessage = "Creating admin user...";
+            StateHasChanged();
+            await Task.Delay(100);
+
+            var adminEmail = "admin@localhost.com";
+            var existingAdmin = await UserManager.FindByEmailAsync(adminEmail);
+
+            if (existingAdmin != null)
+            {
+                // Delete existing admin to recreate with correct password
+                Log("🗑️  Deleting existing admin user...");
+                await UserManager.DeleteAsync(existingAdmin);
+            }
+
+            var adminUser = new User
+            {
+                UserName = adminEmail,
+                Email = adminEmail,
+                EmailConfirmed = true,
+                TenantId = tenant.Id,
+                FirstName = "Admin",
+                LastName = "User",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            var result = await UserManager.CreateAsync(adminUser, "Admin123!");
+
+            if (result.Succeeded)
+            {
+                await UserManager.AddToRoleAsync(adminUser, "Admin");
+                Log("✅ Admin user created successfully");
+                Log($"   Email: {adminEmail}");
+                Log($"   Password: Admin123!");
+                setupComplete = true;
+            }
+            else
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                throw new Exception($"Failed to create admin user: {errors}");
+            }
+
+            statusMessage = "Setup complete!";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Log($"❌ Error: {ex.Message}");
+        }
+        finally
+        {
+            isRunning = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Log(string message)
+    {
+        logs.Add($"[{DateTime.Now:HH:mm:ss}] {message}");
+    }
+}
