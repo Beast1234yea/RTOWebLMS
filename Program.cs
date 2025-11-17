@@ -86,6 +86,25 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 var app = builder.Build();
 
+// Seed database in development mode
+if (app.Environment.IsDevelopment())
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        try
+        {
+            var context = services.GetRequiredService<LmsDbContext>();
+            DbInitializer.Initialize(context);
+        }
+        catch (Exception ex)
+        {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "An error occurred while seeding the database.");
+        }
+    }
+}
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
