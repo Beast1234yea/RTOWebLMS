@@ -12,6 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Add cascading authentication state (required for Blazor Server + Identity)
+builder.Services.AddCascadingAuthenticationState();
+
 // Register application services
 builder.Services.AddScoped<AuthenticationService>();
 builder.Services.AddScoped<AuditLogService>();
