@@ -1,0 +1,69 @@
+@page "/logout"
+@using Microsoft.AspNetCore.Identity
+@using RTOWebLMS.Models
+@inject SignInManager<User> SignInManager
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Logging Out - RTO LMS</PageTitle>
+
+<div class="logout-container">
+    <div class="logout-card">
+        <div class="text-center">
+            @if (isLoggingOut)
+            {
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Logging out...</span>
+                </div>
+                <h3>Signing you out...</h3>
+                <p class="text-muted">Please wait</p>
+            }
+            else if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    <h4>Logout Error</h4>
+                    <p>@errorMessage</p>
+                    <a href="/" class="btn btn-primary">Return Home</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .logout-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .logout-card {
+        background: white;
+        border-radius: 16px;
+        padding: 3rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        min-width: 300px;
+    }
+</style>
+
+@code {
+    private bool isLoggingOut = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await SignInManager.SignOutAsync();
+            await Task.Delay(500); // Brief delay for user feedback
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            isLoggingOut = false;
+            errorMessage = $"An error occurred during logout: {ex.Message}";
+        }
+    }
+}

@@ -1,16 +1,29 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
 
 <PageTitle>Home - RTO LMS</PageTitle>
 
 <div class="hero-section">
     <div class="container">
         <div class="hero-content">
-            <h1 class="hero-title">Welcome to RTO Learning Management System</h1>
-            <p class="hero-subtitle">Your journey to professional excellence starts here</p>
-            <div class="hero-actions">
-                <a href="/courses" class="btn btn-primary btn-lg">Browse Courses</a>
-                <a href="/register" class="btn btn-outline-light btn-lg">Get Started</a>
-            </div>
+            <AuthorizeView>
+                <Authorized>
+                    <h1 class="hero-title">Welcome Back, @context.User.Identity?.Name!</h1>
+                    <p class="hero-subtitle">Continue your learning journey</p>
+                    <div class="hero-actions">
+                        <a href="/dashboard" class="btn btn-primary btn-lg">Go to Dashboard</a>
+                        <a href="/my-learning" class="btn btn-outline-light btn-lg">My Learning</a>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <h1 class="hero-title">Welcome to RTO Learning Management System</h1>
+                    <p class="hero-subtitle">Your journey to professional excellence starts here</p>
+                    <div class="hero-actions">
+                        <a href="/register" class="btn btn-primary btn-lg">Get Started</a>
+                        <a href="/login" class="btn btn-outline-light btn-lg">Login</a>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
     </div>
 </div>

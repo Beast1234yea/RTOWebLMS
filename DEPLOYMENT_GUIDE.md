@@ -1,6 +1,21 @@
 # RTO Web LMS - Deployment Guide
 
-## Quick Start - Deploy to Azure App Service
+**Last Updated**: 2025-11-17 (Multi-Tenant + Identity System)
+
+## 🚨 IMPORTANT: Identity System Updates
+
+This application now uses ASP.NET Core Identity for authentication. Before deploying, you MUST:
+
+1. **Create database migrations** for Identity tables
+2. **Apply migrations** to your database
+3. **Create default tenant** for tenant resolution
+4. **Rotate Supabase password** (old one in Git history)
+
+See "Database Migrations" section below for details.
+
+---
+
+## Quick Start - Deploy to Railway/Azure
 
 This guide will help you deploy your Blazor web application so students can access it from anywhere.
 
@@ -8,9 +23,85 @@ This guide will help you deploy your Blazor web application so students can acce
 
 ## Prerequisites
 
-- Azure account (free trial available: https://azure.microsoft.com/free/)
+- Railway/Azure account (free trials available)
 - Your Supabase database is ready (✅ Already complete!)
 - Application configured (✅ Already complete!)
+- **NEW**: .NET 9.0 SDK (for running migrations locally)
+
+---
+
+## Step 0: Database Migrations (CRITICAL - Do This First!)
+
+### Create and Apply EF Core Migrations
+
+The application now uses ASP.NET Core Identity, which requires additional database tables.
+
+#### On Your Local Machine:
+
+```bash
+cd /home/user/RTOWebLMS
+
+# Create initial migration (includes Identity + Multi-Tenant tables)
+dotnet ef migrations add InitialIdentityMigration
+
+# For SQLite (local development):
+dotnet ef database update
+
+# For PostgreSQL (production):
+# First, set connection string temporarily
+$env:ConnectionStrings__DefaultConnection="Host=aws-1-ap-southeast-2.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.dequkghvbcqqjoiwbltv;Password=YOUR_NEW_PASSWORD;SSL Mode=Require;Trust Server Certificate=true"
+$env:DatabaseProvider="PostgreSQL"
+dotnet ef database update
+```
+
+This creates the following tables:
+- **ASP.NET Identity**: AspNetUsers, AspNetRoles, AspNetUserRoles, AspNetUserClaims, AspNetUserLogins, AspNetUserTokens
+- **Multi-Tenancy**: Tenants (with subdomain support)
+- **Custom RTO**: Courses, Modules, Lessons, Enrollments, LessonProgress, Certificates, etc.
+
+#### Create Default Tenant (Required!)
+
+After migrations, create a default tenant:
+
+```sql
+INSERT INTO "Tenants" ("Id", "TenantId", "Name", "Subdomain", "Plan", "MaxStudents", "IsActive", "CreatedAt", "UpdatedAt")
+VALUES (
+    'default-tenant',
+    'default-tenant',
+    'Default RTO',
+    'localhost',
+    1, -- Professional plan
+    200,
+    true,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+);
+```
+
+Or use this C# code in a seed method:
+```csharp
+var tenant = new Tenant
+{
+    Id = "default-tenant",
+    TenantId = "default-tenant",
+    Name = "Default RTO",
+    Subdomain = "localhost",
+    Plan = SubscriptionPlan.Professional,
+    MaxStudents = 200,
+    IsActive = true
+};
+context.Tenants.Add(tenant);
+context.SaveChanges();
+```
+
+### ⚠️ Security: Rotate Supabase Password
+
+The old password was committed to Git history. Rotate it IMMEDIATELY:
+
+1. Go to Supabase Dashboard → Settings → Database
+2. Change database password to a new strong password
+3. Update environment variable everywhere you use it
+4. **DO NOT** commit the new password to Git
 
 ---
 
